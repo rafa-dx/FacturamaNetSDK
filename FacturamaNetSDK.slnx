@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="FacturamaNetSDK.Sandbox/FacturamaNetSDK.Sandbox.csproj" Id="bccff5d2-5c25-4139-9a5c-51be0c95c7b1" />
+  <Project Path="FacturamaNetSDK/FacturamaNetSDK.csproj" />
+</Solution>
