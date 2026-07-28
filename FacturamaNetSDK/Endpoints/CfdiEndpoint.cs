@@ -1,5 +1,5 @@
 ﻿
-using FacturamaNetSDk.Enums;
+using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
 using FacturamaNetSDK.Models.Cfdi.Requests;
@@ -16,7 +16,9 @@ namespace FacturamaNetSDK.Endpoints;
 /// </summary>
 public sealed class CfdiEndpoint : ICfdiEndpoint
 {
-    private const string Resource = "cfdis";
+    private const string CfdisResource = "cfdis";
+    private const string CfdiResource = "cfdi";
+
     private readonly FacturamaHttpClient _client;
 
     internal CfdiEndpoint(FacturamaHttpClient client)
@@ -33,7 +35,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
     {
         ArgumentNullException.ThrowIfNull(request);
         return  _client.PostAsync<CfdiResponse>(
-            Resource, 
+            CfdisResource, 
             request, 
             cancellationToken: cancellationToken);
     }
@@ -52,7 +54,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
         }
 
         return await _client.GetAsync<CfdiResponse>(
-            $"/cfdi/{id}",
+            $"/{CfdiResource}/{id}",
             queryParams: new() { ["type"] = InvoiceType.Issued.ToString().ToLower() },
             cancellationToken);
     }
@@ -69,7 +71,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
                : null;
 
         var result = await _client.GetAsync<List<CfdiListResponse>>(
-            "/cfdi", 
+            $"/{CfdiResource}", 
             queryParams, 
             cancellationToken);
 
@@ -90,7 +92,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
               : null;
 
         return await _client.GetAsync<CfdiStatusResponse>(
-            $"/cfdi/status",
+            $"/{CfdiResource}/status",
            queryParams,
             cancellationToken);
     }
@@ -109,7 +111,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
             throw new ArgumentException("El ID no puede estar vacío.", nameof(id));
 
         return _client.GetAsync<CfdiDownloadResponse>(
-            $"/cfdi/{fileType}/{invoiceType}/{id}",
+            $"/{CfdiResource}/{fileType}/{invoiceType}/{id}",
             cancellationToken: cancellationToken);
     }
 
@@ -127,7 +129,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
             throw new ArgumentException("El ID no puede estar vacío.", nameof(id));
 
         return _client.DeleteAsync<CfdiCancellationResponse>(
-            $"/cfdi/{id}",
+            $"/{CfdiResource}/{id}",
             queryParams: new()
             {
                 ["type"] = invoiceType.ToString().ToLower(),
@@ -151,7 +153,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
         if (string.IsNullOrWhiteSpace(email))
             throw new ArgumentException("El correo electrónico no puede estar vacío.", nameof(email));
         return _client.PostAsync<CfdiSendResponse>(
-            "/cfdi",
+            $"/{CfdiResource}",
             new { },
             queryParams: new()
             {

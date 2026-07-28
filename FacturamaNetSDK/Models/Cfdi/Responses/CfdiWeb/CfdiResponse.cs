@@ -1,4 +1,6 @@
-﻿namespace FacturamaNetSDK.Models.Cfdi.Responses.CfdiWeb
+﻿using FacturamaNetSDK.Models.Cfdi.Responses.Common;
+
+namespace FacturamaNetSDK.Models.Cfdi.Responses.CfdiWeb
 {
     public record CfdiResponse
     {
@@ -24,7 +26,7 @@
         public string Observations { get; set; }
         public string OrderNumber { get; set; }
 
-        public IssueerResponse Issuer { get; init; }
+        public IssuerResponse Issuer { get; init; }
         public ReceiverResponse Receiver { get; init; }
         public List<ItemResponse> Items { get; init; }
         public List<TaxResponse> Taxes { get; init; }

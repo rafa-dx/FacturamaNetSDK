@@ -31,11 +31,30 @@ public sealed class FacturamaClient
     /// </summary>  
     public ICatalogEndpoint Catalogs { get; }
 
-    public IRetentionEndpoint Retentions { get; }   
+    /// <summary>
+    /// Operaciones de retenciones (/api/retentions).
+    /// </summary>
+    public IRetentionEndpoint Retentions { get; }
 
-    // -------------------------------------------------------------------------
-    // Constructores
-    // -------------------------------------------------------------------------
+    /// <summary>
+    /// Operaciones del perfil fiscal (contribuyente) de la cuenta.
+    /// </summary>
+    public ITaxEntityEndpoint TaxEntity { get; }
+
+    /// <summary>
+    /// Operaciones de sucursales del perfil fiscal.
+    /// </summary>
+    public IBranchOfficeEndpoint BranchOffices { get; }
+
+    /// <summary>
+    /// Operaciones de series de folios, asociadas a una sucursal.
+    /// </summary>
+    public ISeriesEndpoint Series { get; }
+
+    /// <summary>
+    /// Operaciones del plan de suscripción de la cuenta.
+    /// </summary>
+    public ISubscriptionPlanEndpoint SubscriptionPlan { get; }
 
     /// <summary>
     /// Inicializa el cliente con credenciales y configuración por defecto (Sandbox).
@@ -61,7 +80,7 @@ public sealed class FacturamaClient
 
         var apiLitePrefix = $"api-lite/{(int)options.ApiLiteVersion}";
 
-        var webClient = FacturamaHttpClientFactory.CreateApiClient(options, "/3", logger);
+        var webClient = FacturamaHttpClientFactory.CreateApiClient(options, "3", logger);
         var liteVersioned = FacturamaHttpClientFactory.CreateApiClient(options, apiLitePrefix, logger);
         var liteClient = FacturamaHttpClientFactory.CreateApiClient(options, "api-lite", logger);
         var rootClient = FacturamaHttpClientFactory.CreateRootClient(options, logger);
@@ -72,7 +91,9 @@ public sealed class FacturamaClient
         Clients = new ClientEndpoint(rootClient);
         Catalogs = new CatalogEndpoint(rootClient);
         Retentions = new RetentionEndpoint(retentionClient);
-
-
+        TaxEntity = new TaxEntityEndpoint(rootClient);
+        BranchOffices = new BranchOfficeEndpoint(rootClient);
+        Series = new SeriesEndpoint(rootClient);
+        SubscriptionPlan = new SubscriptionPlanEndpoint(rootClient);
     }
 }

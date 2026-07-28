@@ -1,6 +1,6 @@
 ﻿namespace FacturamaNetSDK.Models.Cfdi.Responses
 {
-    public class CfdiListResponse
+    public sealed record CfdiListResponse
     {
         public string Id { get; init; }
 

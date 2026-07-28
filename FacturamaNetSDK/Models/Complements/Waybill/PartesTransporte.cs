@@ -1,4 +1,4 @@
-﻿namespace FacturamaAPI.src.Facturama.Sdk.Core.Models.Complements.Waybill
+﻿namespace FacturamaNetSDK.Models.Complements.Waybill
 {
     public sealed class PartesTransporte
     {

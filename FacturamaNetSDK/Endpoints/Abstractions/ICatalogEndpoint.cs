@@ -92,7 +92,7 @@ public interface ICatalogEndpoint
         CancellationToken cancellationToken = default);
 
     ///
-    Task<IReadOnlyList<Tarifffractions>> GetTarifffractionsAsync(
+    Task<IReadOnlyList<TariffFractions>> GetTariffFractionsAsync(
         string keyword,
         CancellationToken cancellationToken = default);
 

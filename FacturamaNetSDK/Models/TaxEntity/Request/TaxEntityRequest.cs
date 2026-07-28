@@ -9,6 +9,8 @@ namespace FacturamaNetSDK.Models.TaxEntity.Request
         public string Rfc { get; set; }       
         public string TaxName { get; set; }       
         public string Email { get; set; }       
+
+        public string OptionalEmail { get; set; }
         public string Phone { get; set; }      
         public Address TaxAddress { get; set; } 
         // string PasswordSat { get; set; }

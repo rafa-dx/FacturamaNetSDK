@@ -39,7 +39,7 @@ namespace FacturamaNetSDK.Sandbox.WebApiExamples
                 await GetPaymentForms();
                 await GetFiscalRegimens();
                 await GetCfdiTypes();
-                await GetTarifffractions();
+                await GetTariffFractions();
                 await GetIncoterm();
                 await GetClaveUnidadPeso();
                 await GetCatalogTransportKey();
@@ -200,10 +200,10 @@ namespace FacturamaNetSDK.Sandbox.WebApiExamples
             Print("Tipos de CFDI", cfdiTypes);
         }
 
-        private async Task GetTarifffractions()
+        private async Task GetTariffFractions()
         {
             Console.WriteLine("--- Obtener fracciones arancelarias ---");
-            var tariffFractions = await _client.Catalogs.GetTarifffractionsAsync("1234");
+            var tariffFractions = await _client.Catalogs.GetTariffFractionsAsync("1234");
             Print("Fracciones arancelarias", tariffFractions);
         }
 

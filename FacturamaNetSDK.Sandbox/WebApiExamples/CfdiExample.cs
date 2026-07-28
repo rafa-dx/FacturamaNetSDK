@@ -1,5 +1,5 @@
 ﻿
-using FacturamaNetSDk.Enums;
+using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Client;
 using FacturamaNetSDK.Exceptions;
 using FacturamaNetSDK.Models.Cfdi.Requests;

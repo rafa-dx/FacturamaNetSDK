@@ -1,5 +1,5 @@
-﻿using Facturama.Sdk.Core.Models.Filters;
-using FacturamaNetSDk.Enums;
+﻿using FacturamaNetSDK.Models.Filters;
+using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Client;
 using FacturamaNetSDK.Exceptions;
 using FacturamaNetSDK.Models.Retentions.Request;
@@ -26,11 +26,11 @@ namespace FacturamaNetSDK.Sandbox.RetentionExample
             try
             {
                 await CreateAsync();
-                //await GetAsync();
-                //await ListAsync();
+                await GetAsync();
+                await ListAsync();
                 await DownloadPdfAsync();
-                //await SendByEmailAsync();
-                //await CancelAsync();
+                await SendByEmailAsync();
+                await CancelAsync();
             }
             catch (FacturamaValidationException ex)
             {

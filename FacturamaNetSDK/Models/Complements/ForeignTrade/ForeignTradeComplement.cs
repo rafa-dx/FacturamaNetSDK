@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 
 
-namespace Facturama.Sdk.Core.Models.Complements.ForeignTrade
+namespace FacturamaNetSDK.Models.Complements.ForeignTrade
 {
     public sealed class ForeignTradeComplement
     {

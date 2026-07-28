@@ -2,7 +2,7 @@
 
 namespace FacturamaNetSDK.Models.Cfdi.Responses.CfdiWeb
 {
-    public record IssueerResponse
+    public record IssuerResponse
     {
         public string FiscalRegime { get; init; }
         public string Rfc { get; init; }

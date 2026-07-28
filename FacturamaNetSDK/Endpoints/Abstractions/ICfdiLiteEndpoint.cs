@@ -1,4 +1,4 @@
-﻿using FacturamaNetSDk.Enums;
+﻿using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Models.Cfdi.Requests;
 using FacturamaNetSDK.Models.Cfdi.Responses;
 using FacturamaNetSDK.Models.Cfdi.Responses.CfdiLite;

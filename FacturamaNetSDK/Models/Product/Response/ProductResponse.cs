@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 
 
-namespace Facturama.Sdk.Core.Models.Product.Response
+namespace FacturamaNetSDK.Models.Product.Response
 {
     public sealed record ProductResponse
     {

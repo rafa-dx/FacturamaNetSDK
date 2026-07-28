@@ -41,7 +41,7 @@ public sealed class CatalogEndpoint : ICatalogEndpoint
         CancellationToken cancellationToken = default)
     {
         if(string.IsNullOrWhiteSpace(keyword))
-            throw new ArgumentException(nameof(keyword));
+            throw new ArgumentException("El parámetro es obligatorio.", nameof(keyword));
 
         return GetCatalogAsync<PostalCode>(
             "postalcodes", 
@@ -62,7 +62,7 @@ public sealed class CatalogEndpoint : ICatalogEndpoint
         CancellationToken cancellationToken = default)
     {
         if(string.IsNullOrWhiteSpace(countryCode))
-            throw new ArgumentException(nameof(countryCode));
+            throw new ArgumentException("El parámetro es obligatorio.", nameof(countryCode));
 
         return GetCatalogAsync<State>("states",
             new() { ["countryCode"] = countryCode },
@@ -94,7 +94,7 @@ public sealed class CatalogEndpoint : ICatalogEndpoint
         CancellationToken cancellationToken = default)
     {
         if(string.IsNullOrWhiteSpace(localityCode))
-            throw new ArgumentException(nameof(localityCode));
+            throw new ArgumentException("El parámetro es obligatorio.", nameof(localityCode));
 
         return GetCatalogAsync<Neighborhood>("neighborhoods",
             new() { ["postalCode"] = localityCode },
@@ -154,10 +154,10 @@ public sealed class CatalogEndpoint : ICatalogEndpoint
             cancellationToken);
 
 
-    public Task<IReadOnlyList<Tarifffractions>> GetTarifffractionsAsync(
+    public Task<IReadOnlyList<TariffFractions>> GetTariffFractionsAsync(
         string keyword,
         CancellationToken cancellationToken = default)
-        => GetCatalogAsync<Tarifffractions>("tarifffractions",
+        => GetCatalogAsync<TariffFractions>("tarifffractions",
             KeywordParam(keyword),
             cancellationToken);
     public Task<IReadOnlyList<Incoterm>> GetIncotermAsync(

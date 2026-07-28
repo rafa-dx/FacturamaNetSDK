@@ -1,4 +1,4 @@
-﻿using FacturamaAPI.src.Facturama.Sdk.Core.Models.Complements.Waybill;
+﻿using FacturamaNetSDK.Models.Complements.Waybill;
 
 namespace FacturamaNetSDK.Models.Complements.Waybill
 {

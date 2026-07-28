@@ -1,5 +1,5 @@
 ﻿
-using FacturamaNetSDk.Enums;
+using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
 using FacturamaNetSDK.Models.Cfdi.Requests;

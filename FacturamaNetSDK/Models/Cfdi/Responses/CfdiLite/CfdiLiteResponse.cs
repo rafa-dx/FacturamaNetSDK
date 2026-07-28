@@ -1,4 +1,6 @@
-﻿namespace FacturamaNetSDK.Models.Cfdi.Responses.CfdiLite
+﻿using FacturamaNetSDK.Models.Cfdi.Responses.Common;
+
+namespace FacturamaNetSDK.Models.Cfdi.Responses.CfdiLite
 {
     public record CfdiLiteResponse
     {
@@ -20,7 +22,7 @@
         public decimal Total { get; init; }
         public string Observations { get; init; }
 
-        public IssueerResponse Issuer { get; init; }
+        public IssuerResponse Issuer { get; init; }
         public ReceiverResponse Receiver { get; init; }
         public List<ItemResponse> Items { get; init; }
         public List<TaxResponse> Taxes { get; init; }

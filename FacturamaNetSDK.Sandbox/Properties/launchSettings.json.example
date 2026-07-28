@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "FacturamaNetSDK.Sandbox": {
+      "commandName": "Project",
+      "environmentVariables": {
+        "FACTURAMA_USER": "<tu_usuario>",
+        "FACTURAMA_PASS": "<tu_password>"
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 ﻿using System.Runtime.Serialization;
 
 
-namespace FacturamaNetSDk.Enums
+namespace FacturamaNetSDK.Enums
 {
     public enum CfdiType
     {

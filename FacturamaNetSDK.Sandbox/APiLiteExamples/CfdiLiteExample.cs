@@ -1,5 +1,5 @@
 ﻿
-using FacturamaNetSDk.Enums;
+using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Client;
 using FacturamaNetSDK.Exceptions;
 using FacturamaNetSDK.Models.Cfdi.Requests;
@@ -31,13 +31,13 @@ namespace FacturamaNetSDK.Sandbox.APiLiteExamples
             try
             {
                 await CreateAsync();
-                //await GetAsync();
-                //await ListAsync();
-                //await GetStatusAsync();
-                //await DownloadPdfAsync();
-                //await DownloadXmlAsync();
-                //await SendByEmailAsync();
-                //await CancelAsync();
+                await GetAsync();
+                await ListAsync();
+                await GetStatusAsync();
+                await DownloadPdfAsync();
+                await DownloadXmlAsync();
+                await SendByEmailAsync();
+                await CancelAsync();
             }
             catch (FacturamaValidationException ex)
             {
@@ -72,7 +72,7 @@ namespace FacturamaNetSDK.Sandbox.APiLiteExamples
                 NameId = "1",
                 Folio = "99",
                 Serie = "FAC",
-                CfdiType = FacturamaNetSDk.Enums.CfdiType.Ingreso.ToApiValue(),
+                CfdiType = FacturamaNetSDK.Enums.CfdiType.Ingreso.ToApiValue(),
                 PaymentForm = "01",
                 PaymentMethod = "PUE",
                 ExpeditionPlace = "78000",

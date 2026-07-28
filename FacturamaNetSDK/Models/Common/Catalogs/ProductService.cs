@@ -2,10 +2,10 @@
 {
     public sealed class ProductService : CatalogBase
     {
-        public string IncludeIva { get;  }
-        public string IncludeIeps { get;  }
-        public string Complement { get;  }
+        public string IncludeIva { get; set; }
+        public string IncludeIeps { get; set; }
+        public string Complement { get; set; }
 
-        public string DangerousMaterial { get;  }
+        public string DangerousMaterial { get; set; }
     }
 }

@@ -1,6 +1,6 @@
 ﻿
-using Facturama.Sdk.Core.Models.Complements.ForeignTrade;
-using FacturamaNetSDk.Models.Complements.TaxLegends;
+using FacturamaNetSDK.Models.Complements.ForeignTrade;
+using FacturamaNetSDK.Models.Complements.TaxLegends;
 using FacturamaNetSDK.Models.Complements.Donation;
 using FacturamaNetSDK.Models.Complements.Payments;
 using FacturamaNetSDK.Models.Complements.Payroll;

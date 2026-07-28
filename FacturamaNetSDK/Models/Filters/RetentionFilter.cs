@@ -1,7 +1,7 @@
 ﻿
-using FacturamaNetSDk.Enums;
+using FacturamaNetSDK.Enums;
 
-namespace Facturama.Sdk.Core.Models.Filters
+namespace FacturamaNetSDK.Models.Filters
 {
     public sealed record RetentionFilter
     {

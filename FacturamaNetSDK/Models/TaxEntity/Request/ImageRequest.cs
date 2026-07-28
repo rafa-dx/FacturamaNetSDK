@@ -1,9 +1,9 @@
-﻿namespace Facturama.Sdk.Core.Models.TaxEntity.Request
+﻿namespace FacturamaNetSDK.Models.TaxEntity.Request
 {
     public sealed record ImageRequest
     {
 
-        public string Img { get; set; }
-        public string Type { get; set; }
+        public string Image { get; init; }
+        public string Type { get; init; }
     }
 }

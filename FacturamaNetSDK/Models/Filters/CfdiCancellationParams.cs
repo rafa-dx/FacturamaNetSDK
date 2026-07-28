@@ -2,7 +2,7 @@
 
 using System.ComponentModel.DataAnnotations;
 
-namespace Facturama.Sdk.Core.Models.Filters
+namespace FacturamaNetSDK.Models.Filters
 {
     public sealed record CfdiCancellationParams
     {

@@ -1,5 +1,5 @@
 ﻿
-using FacturamaNetSDk.Enums;
+using FacturamaNetSDK.Enums;
 
 namespace FacturamaNetSDK.Models.Filters
 {

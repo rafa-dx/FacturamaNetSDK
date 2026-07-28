@@ -1,7 +1,7 @@
 ﻿
 using FacturamaNetSDK.Models.Common;
 
-namespace FacturamaNetSDK.Models.BranchOffice.Request
+namespace FacturamaNetSDK.Models.BranchOffice.Response
 {
     public sealed record BranchOfficeResponse
     {
@@ -18,7 +18,7 @@ namespace FacturamaNetSDK.Models.BranchOffice.Request
         public Address Address { get; init; }
 
 
-        public string IsDefault { get; init; }
+        public bool IsDefault { get; init; }
 
     }
 }

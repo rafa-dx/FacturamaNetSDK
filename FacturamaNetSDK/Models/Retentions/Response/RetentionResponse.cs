@@ -2,7 +2,7 @@
 using System.Text.Json.Serialization;
 
 
-namespace Facturama.Sdk.Core.Models.Retentions.Response
+namespace FacturamaNetSDK.Models.Retentions.Response
 {
     public record RetentionResponse
     {

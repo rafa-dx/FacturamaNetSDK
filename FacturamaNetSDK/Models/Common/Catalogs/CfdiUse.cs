@@ -2,8 +2,8 @@
 {
     public sealed class CfdiUse: CatalogBase
     {
-        public string Natural {  get; }
+        public string Natural { get; set; }
 
-        public string Moral { get; }
+        public string Moral { get; set; }
     }
 }

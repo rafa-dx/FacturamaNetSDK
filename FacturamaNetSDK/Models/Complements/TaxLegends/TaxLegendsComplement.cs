@@ -1,5 +1,5 @@
 ﻿
-namespace FacturamaNetSDk.Models.Complements.TaxLegends
+namespace FacturamaNetSDK.Models.Complements.TaxLegends
 {
     public sealed class TaxLegendsComplement
     {

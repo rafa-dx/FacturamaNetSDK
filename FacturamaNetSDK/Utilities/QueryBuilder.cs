@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace FacturamaNetSDK.Utilities
 {
-    public class QueryBuilder
+    internal static class QueryBuilder
     {
         public static Dictionary<string, string?> FromObject(object obj)
         {

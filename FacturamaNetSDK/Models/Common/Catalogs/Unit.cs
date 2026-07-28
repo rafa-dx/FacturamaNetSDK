@@ -2,6 +2,6 @@
 {
     public sealed class Unit : CatalogBase
     {
-        public string ShortName { get; }
+        public string ShortName { get; set; }
     }
 }

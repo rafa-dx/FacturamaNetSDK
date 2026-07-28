@@ -1,5 +1,6 @@
 ﻿using FacturamaNetSDK.Exceptions;
 using FacturamaNetSDK.Serialization;
+using Polly.CircuitBreaker;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -34,6 +35,12 @@ internal sealed class FacturamaHttpClient
             return await HandleResponseAsync<TResponse>(response, cancellationToken)
                 .ConfigureAwait(false);
         }
+        catch (BrokenCircuitException)
+        {
+            throw new FacturamaServerException(
+                "El servicio de Facturama no está disponible temporalmente (circuit breaker abierto). Intenta más tarde.",
+                503);
+        }
         catch (HttpRequestException ex)
         {
             throw new FacturamaConnectionException(ex);
@@ -62,6 +69,12 @@ internal sealed class FacturamaHttpClient
             return await HandleResponseAsync<TResponse>(response, cancellationToken)
                 .ConfigureAwait(false);
         }
+        catch (BrokenCircuitException)
+        {
+            throw new FacturamaServerException(
+                "El servicio de Facturama no está disponible temporalmente (circuit breaker abierto). Intenta más tarde.",
+                503);
+        }
         catch (HttpRequestException ex)
         {
             throw new FacturamaConnectionException(ex);
@@ -86,6 +99,12 @@ internal sealed class FacturamaHttpClient
 
             return await HandleResponseAsync<TResponse>(response, cancellationToken)
                 .ConfigureAwait(false);
+        }
+        catch (BrokenCircuitException)
+        {
+            throw new FacturamaServerException(
+                "El servicio de Facturama no está disponible temporalmente (circuit breaker abierto). Intenta más tarde.",
+                503);
         }
         catch (HttpRequestException ex)
         {
@@ -112,6 +131,12 @@ internal sealed class FacturamaHttpClient
             if (!response.IsSuccessStatusCode)
                 await ThrowFacturamaExceptionAsync(response, cancellationToken).ConfigureAwait(false);
         }
+        catch (BrokenCircuitException)
+        {
+            throw new FacturamaServerException(
+                "El servicio de Facturama no está disponible temporalmente (circuit breaker abierto). Intenta más tarde.",
+                503);
+        }
         catch (HttpRequestException ex)
         {
             throw new FacturamaConnectionException(ex);
@@ -136,6 +161,12 @@ internal sealed class FacturamaHttpClient
 
             return await HandleResponseAsync<TResponse>(response, cancellationToken)
                 .ConfigureAwait(false);
+        }
+        catch (BrokenCircuitException)
+        {
+            throw new FacturamaServerException(
+                "El servicio de Facturama no está disponible temporalmente (circuit breaker abierto). Intenta más tarde.",
+                503);
         }
         catch (HttpRequestException ex)
         {
@@ -164,6 +195,12 @@ internal sealed class FacturamaHttpClient
 
             return await response.Content.ReadAsByteArrayAsync(cancellationToken)
                 .ConfigureAwait(false);
+        }
+        catch (BrokenCircuitException)
+        {
+            throw new FacturamaServerException(
+                "El servicio de Facturama no está disponible temporalmente (circuit breaker abierto). Intenta más tarde.",
+                503);
         }
         catch (HttpRequestException ex)
         {
@@ -222,6 +259,11 @@ internal sealed class FacturamaHttpClient
         var content = await response.Content.ReadAsStringAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        var retryAfter = response.Headers.RetryAfter?.Delta
+            ?? (response.Headers.RetryAfter?.Date is { } retryDate
+                ? retryDate - DateTimeOffset.UtcNow
+                : (TimeSpan?)null);
+
         throw response.StatusCode switch
         {
             HttpStatusCode.Unauthorized =>
@@ -234,7 +276,7 @@ internal sealed class FacturamaHttpClient
                 new FacturamaValidationException(content),
 
             HttpStatusCode.TooManyRequests =>
-                new FacturamaRateLimitException(),
+                new FacturamaRateLimitException(retryAfter),
 
             HttpStatusCode.InternalServerError =>
                 new FacturamaServerException(500),

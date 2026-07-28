@@ -19,4 +19,8 @@
 		<ProjectReference Include="..\FacturamaNetSDK\FacturamaNetSDK.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Complement\" />
+	</ItemGroup>
+
 </Project>
