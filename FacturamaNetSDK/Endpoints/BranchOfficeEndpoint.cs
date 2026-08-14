@@ -51,7 +51,7 @@ public sealed class BranchOfficeEndpoint : IBranchOfficeEndpoint
     {
         var result = await _client.GetAsync<List<BranchOfficeResponse>>(
             Resource,
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         return result is null ? Array.Empty<BranchOfficeResponse>() : result.AsReadOnly();
     }
 

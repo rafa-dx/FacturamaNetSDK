@@ -37,7 +37,7 @@ public sealed class FacturamaOptions
         ? "https://api.facturama.mx"
         : "https://apisandbox.facturama.mx";
 
-    // public RetryOptions Retry { get; set; } = new();
+    public RetryOptions Retry { get; set; } = new();
     // public CircuitBreakerOptions CircuitBreaker { get; set; } = new();
 
     /// <summary>

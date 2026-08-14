@@ -38,10 +38,15 @@ public sealed class CfdiLiteEndpoint : ICfdiLiteEndpoint
     /// </summary>
     public Task<CfdiLiteResponse> CreateAsync(
         CfdiRequest request,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return _liteVersionedClient.PostAsync<CfdiLiteResponse>(Resource, request, cancellationToken: cancellationToken);
+        return _liteVersionedClient.PostAsync<CfdiLiteResponse>(
+            Resource,
+            request,
+            idempotencyKey: idempotencyKey,
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -68,12 +73,12 @@ public sealed class CfdiLiteEndpoint : ICfdiLiteEndpoint
         CfdiFilter? filters = null,
         CancellationToken cancellationToken = default)
     {
-        var queryParams = filters != null
-       ? QueryBuilder.FromObject(filters)
-       : null;
+        var queryParams = filters is not null
+            ? QueryBuilder.FromObject(filters)
+            : null;
 
         var result = await _rootClient.GetAsync<List<CfdiListResponse>>(
-            "/cfdi", queryParams, cancellationToken);
+            "/cfdi", queryParams, cancellationToken).ConfigureAwait(false);
 
         if (result is null) return Array.Empty<CfdiListResponse>();
         return result.AsReadOnly();
@@ -143,6 +148,6 @@ public sealed class CfdiLiteEndpoint : ICfdiLiteEndpoint
                 ["comments"] = comments,
                 ["issuerEmail"] = issuerEmail
             },
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 }

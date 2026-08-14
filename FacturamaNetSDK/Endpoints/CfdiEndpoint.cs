@@ -12,7 +12,7 @@ using FacturamaNetSDK.Utilities;
 namespace FacturamaNetSDK.Endpoints;
 
 /// <summary>
-/// Operaciones CFDI para API Web (/api/3/cfdis).
+/// Operaciones CFDI para API Web (/3/cfdis).
 /// </summary>
 public sealed class CfdiEndpoint : ICfdiEndpoint
 {
@@ -29,31 +29,30 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
     /// <summary>
     /// Crea un nuevo CFDI.
     /// </summary>
-    public  Task<CfdiResponse> CreateAsync(
+    public Task<CfdiResponse> CreateAsync(
         CfdiRequest request,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return  _client.PostAsync<CfdiResponse>(
-            CfdisResource, 
-            request, 
+        return _client.PostAsync<CfdiResponse>(
+            CfdisResource,
+            request,
+            idempotencyKey: idempotencyKey,
             cancellationToken: cancellationToken);
     }
 
     /// <summary>
     /// Obtiene un CFDI por ID.
     /// </summary>
-    public async Task<CfdiResponse> GetAsync(
+    public Task<CfdiResponse> GetAsync(
         string id,
         CancellationToken cancellationToken = default)
     {
-
-        if(string.IsNullOrWhiteSpace(id))
-        {
+        if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("El ID no puede estar vacío.", nameof(id));
-        }
 
-        return await _client.GetAsync<CfdiResponse>(
+        return _client.GetAsync<CfdiResponse>(
             $"/{CfdiResource}/{id}",
             queryParams: new() { ["type"] = InvoiceType.Issued.ToString().ToLower() },
             cancellationToken);
@@ -62,7 +61,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
     /// <summary>
     /// Lista CFDIs con filtros opcionales.
     /// </summary>
-    public async Task<IReadOnlyList<CfdiListResponse>?> ListAsync(
+    public async Task<IReadOnlyList<CfdiListResponse>> ListAsync(
         CfdiFilter? filters = null,
         CancellationToken cancellationToken = default)
     {
@@ -71,9 +70,9 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
                : null;
 
         var result = await _client.GetAsync<List<CfdiListResponse>>(
-            $"/{CfdiResource}", 
-            queryParams, 
-            cancellationToken);
+            $"/{CfdiResource}",
+            queryParams,
+            cancellationToken).ConfigureAwait(false);
 
         if (result is null) return Array.Empty<CfdiListResponse>();
         return result.AsReadOnly();
@@ -82,18 +81,17 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
     /// <summary>
     /// Consulta el status de un CFDI en el SAT.
     /// </summary>
-    public async Task<CfdiStatusResponse> GetStatusAsync(
+    public Task<CfdiStatusResponse> GetStatusAsync(
         CfdiStatusParams statusParams,
         CancellationToken cancellationToken = default)
     {
+        var queryParams = statusParams is not null
+            ? QueryBuilder.FromObject(statusParams)
+            : null;
 
-        var queryParams = statusParams != null
-              ? QueryBuilder.FromObject(statusParams)
-              : null;
-
-        return await _client.GetAsync<CfdiStatusResponse>(
+        return _client.GetAsync<CfdiStatusResponse>(
             $"/{CfdiResource}/status",
-           queryParams,
+            queryParams,
             cancellationToken);
     }
 
@@ -136,7 +134,7 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
                 ["motive"] = motive,
                 ["uuidReplacement"] = uuidReplacement
             },
-            cancellationToken);
+            cancellationToken : cancellationToken);
     }
 
     /// <summary>
@@ -161,6 +159,6 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
                 ["cfdiId"] = id,
                 ["email"] = email
             },
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 }

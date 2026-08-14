@@ -11,7 +11,7 @@ public class SubscriptionPlanExample
         _client = client;
     }
 
-    public async Task Run()
+    public async Task RunAsync()
     {
         Console.WriteLine("\n========================================");
         Console.WriteLine("  Subscription Plan");

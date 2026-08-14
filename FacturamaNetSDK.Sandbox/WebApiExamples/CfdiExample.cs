@@ -23,7 +23,7 @@ public class CfdiExample
     public async Task RunAsync()
     {
         Console.WriteLine("\n========================================");
-        Console.WriteLine("  CFDI — API Web");
+        Console.WriteLine("  CFDI — API Web   ");
         Console.WriteLine("========================================\n");
 
         try
@@ -31,11 +31,11 @@ public class CfdiExample
             await CreateAsync();
             await GetAsync();
             await ListAsync();
-            //await GetStatusAsync();
+            await GetStatusAsync();
             await DownloadPdfAsync();
             await DownloadXmlAsync();
             await SendByEmailAsync();
-            await CancelAsync();
+  
         }
         catch (FacturamaValidationException ex)
         {
@@ -58,6 +58,15 @@ public class CfdiExample
         catch (Exception ex)
         {
             Console.WriteLine($"\n[Error inesperado] {ex.Message}");
+        }
+        finally
+        {
+            if (_cfdiId is not null)
+            {
+                Console.WriteLine("\n--- Cancelar CFDI ---");
+                await CancelAsync();
+            }
+            
         }
     }
 
