@@ -12,8 +12,15 @@ namespace FacturamaNetSDK.Endpoints.Abstractions;
 public interface ICfdiLiteEndpoint
 {
     /// <summary>Crea un nuevo CFDI.</summary>
+    /// <param name="request">Datos del CFDI a crear.</param>
+    /// <param name="idempotencyKey">
+    /// Clave de idempotencia opcional. Si se omite, el SDK genera un UUID v4 por operación
+    /// de escritura. Provéela explícitamente para deduplicar reintentos propios entre procesos.
+    /// </param>
+    /// <param name="cancellationToken">Token de cancelación.</param>
     Task<CfdiLiteResponse> CreateAsync(
-        CfdiRequest request, 
+        CfdiRequest request,
+        string? idempotencyKey = null,
         CancellationToken cancellationToken = default);
 
     /// <summary>Obtiene un CFDI por ID.</summary>

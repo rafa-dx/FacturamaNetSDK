@@ -9,8 +9,16 @@ namespace FacturamaNetSDK.Client;
 /// <summary>
 /// Cliente principal del SDK de Facturama.
 /// </summary>
-public sealed class FacturamaClient
+/// <remarks>
+/// Está diseñado para instanciarse <b>una sola vez</b> y reutilizarse durante toda la vida
+/// de la aplicación: mantiene el pool de conexiones y el estado del circuit breaker.
+/// Crear una instancia por petición agota los sockets disponibles.
+/// </remarks>
+public sealed class FacturamaClient : IDisposable
 {
+    private readonly FacturamaHttpClient[] _httpClients;
+    private bool _disposed;
+
     /// <summary>
     /// Operaciones CFDI — API Web (/api/3/cfdis).
     /// </summary>
@@ -25,6 +33,11 @@ public sealed class FacturamaClient
     /// Operaciones de clientes (/Client).
     /// </summary>
     public IClientEndpoint Clients { get; }
+
+    /// <summary>
+    /// Operaciones de productos (/Product).
+    /// </summary>
+    public IProductEndpoint Products { get; }
 
     /// <summary>
     /// Operaciones de catálogos (/catalogs).
@@ -79,21 +92,39 @@ public sealed class FacturamaClient
         options.Validate();
 
         var apiLitePrefix = $"api-lite/{(int)options.ApiLiteVersion}";
+        var factory = new FacturamaHttpClientFactory(options, logger);
 
-        var webClient = FacturamaHttpClientFactory.CreateApiClient(options, "3", logger);
-        var liteVersioned = FacturamaHttpClientFactory.CreateApiClient(options, apiLitePrefix, logger);
-        var liteClient = FacturamaHttpClientFactory.CreateApiClient(options, "api-lite", logger);
-        var rootClient = FacturamaHttpClientFactory.CreateRootClient(options, logger);
-        var retentionClient = FacturamaHttpClientFactory.CreateApiClient(options, "api", logger);
+        var webClient = factory.CreateApiClient("3");
+        var liteVersioned = factory.CreateApiClient(apiLitePrefix);
+        var liteClient = factory.CreateApiClient("api-lite");
+        var rootClient = factory.CreateRootClient();
+        var retentionClient = factory.CreateApiClient("api");
+
+        _httpClients = new[] { webClient, liteVersioned, liteClient, rootClient, retentionClient };
 
         Cfdi = new CfdiEndpoint(webClient);
         CfdiLite = new CfdiLiteEndpoint(liteVersioned, liteClient, rootClient, webClient);
         Clients = new ClientEndpoint(rootClient);
+        Products = new ProductEndpoint(rootClient);
         Catalogs = new CatalogEndpoint(rootClient);
         Retentions = new RetentionEndpoint(retentionClient);
         TaxEntity = new TaxEntityEndpoint(rootClient);
         BranchOffices = new BranchOfficeEndpoint(rootClient);
         Series = new SeriesEndpoint(rootClient);
         SubscriptionPlan = new SubscriptionPlanEndpoint(rootClient);
+    }
+
+    /// <summary>
+    /// Libera los clientes HTTP subyacentes y sus conexiones.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        foreach (var httpClient in _httpClients)
+            httpClient.Dispose();
+
+        _disposed = true;
     }
 }
