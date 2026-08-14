@@ -1,6 +1,5 @@
-﻿
 using System.Reflection;
-
+using System.Text.Json.Serialization;
 
 namespace FacturamaNetSDK.Utilities
 {
@@ -17,10 +16,12 @@ namespace FacturamaNetSDK.Utilities
                 {
                     continue;
                 }
-                dictionary[property.Name] = value.ToString();
+                dictionary[ParameterName(property)] = value.ToString();
             }
             return dictionary;
-
         }
+
+        private static string ParameterName(PropertyInfo property) =>
+            property.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? property.Name;
     }
 }
