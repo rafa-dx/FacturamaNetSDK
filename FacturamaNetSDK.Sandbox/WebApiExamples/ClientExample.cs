@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace FacturamaNetSDK.Sandbox.WebApiExamples
 {
-    internal class ClientExample
+    public class ClientExample
     {
     }
 }
