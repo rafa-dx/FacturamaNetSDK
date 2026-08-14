@@ -56,12 +56,12 @@ public sealed class RetentionEndpoint : IRetentionEndpoint
         RetentionFilter filters,
         CancellationToken cancellationToken = default)
     {
-        var queryParams = filters != null
+        var queryParams = filters is not null
             ? QueryBuilder.FromObject(filters)
             : null;
 
         var result = await _client.GetAsync<List<CfdiListResponse>>(
-            Resource, queryParams, cancellationToken);
+            Resource, queryParams, cancellationToken).ConfigureAwait(false);
 
         return result is null ? Array.Empty<CfdiListResponse>() : result.AsReadOnly();
     }
@@ -114,7 +114,7 @@ public sealed class RetentionEndpoint : IRetentionEndpoint
             $"{Resource}/envia",
             null!,
             queryParams,
-            cancellationToken);
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>

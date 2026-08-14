@@ -55,7 +55,7 @@ public sealed class ClientEndpoint : IClientEndpoint
             : null;
 
         var result = await _client.GetAsync<List<ClientResponse>>(
-            Resource, queryParams, cancellationToken);
+            Resource, queryParams, cancellationToken).ConfigureAwait(false);
         return result is null ? Array.Empty<ClientResponse>() : result.AsReadOnly();
     }
 

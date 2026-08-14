@@ -19,15 +19,23 @@ public sealed class SeriesEndpoint : ISeriesEndpoint
     }
 
     /// <inheritdoc />
-    public async Task<IReadOnlyList<SerieResponse>> ListAsync(
+    public Task<IReadOnlyList<SerieResponse>> ListAsync(
         string branchOfficeId,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(branchOfficeId))
             throw new ArgumentNullException(nameof(branchOfficeId));
+
+        return ListCoreAsync(branchOfficeId, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<SerieResponse>> ListCoreAsync(
+        string branchOfficeId,
+        CancellationToken cancellationToken)
+    {
         var result = await _client.GetAsync<List<SerieResponse>>(
             $"{Resource}/{branchOfficeId}",
-            cancellationToken: cancellationToken);
+            cancellationToken: cancellationToken).ConfigureAwait(false);
         return result is null ? Array.Empty<SerieResponse>() : result.AsReadOnly();
     }
 
