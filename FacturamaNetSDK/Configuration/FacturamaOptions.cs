@@ -38,7 +38,8 @@ public sealed class FacturamaOptions
         : "https://apisandbox.facturama.mx";
 
     public RetryOptions Retry { get; set; } = new();
-    // public CircuitBreakerOptions CircuitBreaker { get; set; } = new();
+
+    public CircuitBreakerOptions CircuitBreaker { get; set; } = new();
 
     /// <summary>
     /// Valida que la configuración sea correcta.
@@ -51,5 +52,8 @@ public sealed class FacturamaOptions
 
         if (string.IsNullOrWhiteSpace(Password))
             throw new ArgumentException("El Password es requerido.", nameof(Password));
+
+        Retry.validate();
+        CircuitBreaker.Validate();
     }
 }
