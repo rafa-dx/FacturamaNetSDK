@@ -17,12 +17,6 @@ namespace FacturamaNetSDK.Http;
 /// </summary>
 internal sealed class FacturamaHttpClientFactory
 {
-    // ⚠️ a definir con el equipo: umbrales del circuit breaker.
-    private const int FailuresBeforeBreaking = 5;
-    private static readonly TimeSpan BreakDuration = TimeSpan.FromSeconds(30);
-
-    // ⚠️ a definir con el equipo: margen extra sobre el presupuesto total calculado,
-    // para que el techo de HttpClient nunca corte antes que el timeout por intento.
     private static readonly TimeSpan SafetyMargin = TimeSpan.FromSeconds(5);
 
     private readonly FacturamaOptions _options;
@@ -93,7 +87,7 @@ internal sealed class FacturamaHttpClientFactory
         // El breaker y el timeout por intento siempre se construyen: protegen el servicio
         // con independencia de que los reintentos estén activos o no.
         var perAttemptTimeout = BuildPerAttemptTimeout(options, log);
-        var circuitBreaker = BuildCircuitBreaker(log);
+        var circuitBreaker = BuildCircuitBreaker(options, log);
         var withoutRetry = Policy.WrapAsync(circuitBreaker, perAttemptTimeout);
 
         if (!options.Retry.Enabled)
@@ -117,13 +111,20 @@ internal sealed class FacturamaHttpClientFactory
                 return Task.CompletedTask;
             });
 
-    private static IAsyncPolicy<HttpResponseMessage> BuildCircuitBreaker(ILogger log) =>
-        HttpPolicyExtensions
+    private static IAsyncPolicy<HttpResponseMessage> BuildCircuitBreaker(
+        FacturamaOptions options,
+        ILogger log)
+    {
+        var basePolicy = HttpPolicyExtensions
             .HandleTransientHttpError()
-            .Or<TimeoutRejectedException>()
-            .CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: FailuresBeforeBreaking,
-                durationOfBreak: BreakDuration,
+            .Or<TimeoutRejectedException>();
+
+        if (!options.CircuitBreaker.Enabled)
+        { return Policy.NoOpAsync<HttpResponseMessage>(); }
+        
+        return basePolicy.CircuitBreakerAsync(
+                handledEventsAllowedBeforeBreaking: options.CircuitBreaker.FailuresBeforeBreaking,
+                durationOfBreak: options.CircuitBreaker.BreakDuration,
                 onBreak: (outcome, duration) =>
                     log.LogError(
                         "Circuit breaker abierto por {Seconds}s — {Reason}",
@@ -133,6 +134,9 @@ internal sealed class FacturamaHttpClientFactory
                     log.LogInformation("Circuit breaker cerrado — reanudando peticiones"),
                 onHalfOpen: () =>
                     log.LogInformation("Circuit breaker en half-open — probando conexión"));
+    }
+
+            
 
     private static IAsyncPolicy<HttpResponseMessage> BuildRetry(
         FacturamaOptions options,
