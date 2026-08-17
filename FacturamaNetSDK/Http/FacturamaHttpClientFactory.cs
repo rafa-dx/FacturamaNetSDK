@@ -80,7 +80,11 @@ internal sealed class FacturamaHttpClientFactory
     // Políticas de resiliencia
     // -------------------------------------------------------------------------
 
-    private static Func<HttpRequestMessage, IAsyncPolicy<HttpResponseMessage>> BuildPolicySelector(
+    /// <summary>
+    /// Construye las políticas una sola vez y devuelve el selector por petición. El breaker
+    /// resultante es una única instancia compartida por todos los clientes de esta fábrica.
+    /// </summary>
+    internal static Func<HttpRequestMessage, IAsyncPolicy<HttpResponseMessage>> BuildPolicySelector(
         FacturamaOptions options,
         ILogger log)
     {
@@ -111,39 +115,77 @@ internal sealed class FacturamaHttpClientFactory
                 return Task.CompletedTask;
             });
 
+    /// <summary>
+    /// Encadena las dos capas del breaker: la racha por fuera (dispara antes en una caída total
+    /// y evita evaluar el ratio cuando ya cortó) y el ratio por dentro. Cualquiera de las dos
+    /// puede abrir el circuito; la <c>BrokenCircuitException</c> de la interna no la cuenta la
+    /// externa, porque no está entre los fallos que maneja.
+    /// </summary>
     private static IAsyncPolicy<HttpResponseMessage> BuildCircuitBreaker(
         FacturamaOptions options,
         ILogger log)
     {
-        var basePolicy = HttpPolicyExtensions
-            .HandleTransientHttpError()
-            .Or<TimeoutRejectedException>();
+        var breaker = options.CircuitBreaker;
 
-        if (!options.CircuitBreaker.Enabled)
-        { return Policy.NoOpAsync<HttpResponseMessage>(); }
-        
-        return basePolicy.CircuitBreakerAsync(
-                handledEventsAllowedBeforeBreaking: options.CircuitBreaker.FailuresBeforeBreaking,
-                durationOfBreak: options.CircuitBreaker.BreakDuration,
-                onBreak: (outcome, duration) =>
-                    log.LogError(
-                        "Circuit breaker abierto por {Seconds}s — {Reason}",
-                        duration.TotalSeconds,
-                        Describe(outcome)),
-                onReset: () =>
-                    log.LogInformation("Circuit breaker cerrado — reanudando peticiones"),
-                onHalfOpen: () =>
-                    log.LogInformation("Circuit breaker en half-open — probando conexión"));
+        if (!breaker.Enabled)
+            return Policy.NoOpAsync<HttpResponseMessage>();
+
+        return Policy.WrapAsync(
+            BuildConsecutiveFailureBreaker(breaker, log),
+            BuildFailureRatioBreaker(breaker, log));
     }
 
-            
+    private static IAsyncPolicy<HttpResponseMessage> BuildConsecutiveFailureBreaker(
+        CircuitBreakerOptions breaker,
+        ILogger log) =>
+        HandledFailures().CircuitBreakerAsync(
+            handledEventsAllowedBeforeBreaking: breaker.FailuresBeforeBreaking,
+            durationOfBreak: breaker.BreakDuration,
+            onBreak: (outcome, duration) =>
+                log.LogError(
+                    "Circuit breaker abierto por {Seconds}s — {Failures} fallos consecutivos. Último: {Reason}",
+                    duration.TotalSeconds,
+                    breaker.FailuresBeforeBreaking,
+                    Describe(outcome)),
+            onReset: () =>
+                log.LogInformation("Circuit breaker (racha) cerrado — reanudando peticiones"),
+            onHalfOpen: () =>
+                log.LogInformation("Circuit breaker (racha) en half-open — probando conexión"));
+
+    private static IAsyncPolicy<HttpResponseMessage> BuildFailureRatioBreaker(
+        CircuitBreakerOptions breaker,
+        ILogger log) =>
+        HandledFailures().AdvancedCircuitBreakerAsync(
+            failureThreshold: breaker.FailureRatio,
+            samplingDuration: breaker.SamplingDuration,
+            minimumThroughput: breaker.MinimumThroughput,
+            durationOfBreak: breaker.BreakDuration,
+            onBreak: (outcome, duration) =>
+                log.LogError(
+                    "Circuit breaker abierto por {Seconds}s — más del {Ratio:P0} de las peticiones falló en {Sampling}s. Último: {Reason}",
+                    duration.TotalSeconds,
+                    breaker.FailureRatio,
+                    breaker.SamplingDuration.TotalSeconds,
+                    Describe(outcome)),
+            onReset: () =>
+                log.LogInformation("Circuit breaker (ratio) cerrado — reanudando peticiones"),
+            onHalfOpen: () =>
+                log.LogInformation("Circuit breaker (ratio) en half-open — probando conexión"));
+
+    /// <summary>
+    /// Fallos que disparan la resiliencia: errores HTTP transitorios (5xx, 408) y el timeout
+    /// por intento. Compartido por los reintentos y por las dos capas del breaker para que
+    /// todos reaccionen exactamente a lo mismo.
+    /// </summary>
+    private static PolicyBuilder<HttpResponseMessage> HandledFailures() =>
+        HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .Or<TimeoutRejectedException>();
 
     private static IAsyncPolicy<HttpResponseMessage> BuildRetry(
         FacturamaOptions options,
         ILogger log) =>
-        HttpPolicyExtensions
-            .HandleTransientHttpError()
-            .Or<TimeoutRejectedException>()
+        HandledFailures()
             .WaitAndRetryAsync(
                 retryCount: options.Retry.MaxRetries,
                 sleepDurationProvider: attempt => BackoffDelay(options.Retry, attempt),
