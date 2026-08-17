@@ -155,10 +155,39 @@ catch (FacturamaException ex)                // base (servidor, timeout, conexi�
 
 ## Resiliencia
 
-El pipeline HTTP incluye por defecto (vía Polly):
+El pipeline HTTP incluye por defecto (vía Polly), sin que tengas que configurar nada:
 
-- **Reintentos:** 3 intentos con backoff exponencial, solo en errores transitorios.
-- **Circuit breaker:** abre tras 5 fallos consecutivos, se recupera a los 30 s.
+- **Reintentos:** 3 intentos con backoff exponencial, solo en errores transitorios y solo en
+  verbos idempotentes (GET, PUT, DELETE). POST no se reintenta por defecto.
+- **Circuit breaker en dos capas**, ambas compartidas por todos los endpoints del cliente y
+  con 30 s de recuperación:
+  - **Racha:** abre tras 10 fallos *consecutivos*. Protege al consumidor de bajo volumen y
+    detecta una caída total de la API.
+  - **Ratio:** abre cuando más del 50 % de las peticiones falla en una ventana de 60 s, siempre
+    que haya al menos 20 peticiones en ella. Detecta degradación parcial bajo carga.
+
+Con el circuito abierto, las peticiones fallan de inmediato con `FacturamaServerException` (503)
+sin llegar a la red.
+
+> Ambas capas cuentan **intentos**, no operaciones: cada reintento pasa por ellas. Si ajustas los
+> umbrales, `FailuresBeforeBreaking` y `MinimumThroughput` deben superar `MaxRetries + 1`, o una
+> sola petición fallida dejará el circuito abierto. El SDK lo valida al construir el cliente.
+
+```csharp
+var client = new FacturamaClient(options =>
+{
+    options.Username = "usuario";
+    options.Password = "contraseña";
+    options.CircuitBreaker = new CircuitBreakerOptions
+    {
+        FailuresBeforeBreaking = 10,
+        FailureRatio = 0.5,
+        SamplingDuration = TimeSpan.FromSeconds(60),
+        MinimumThroughput = 20,
+        BreakDuration = TimeSpan.FromSeconds(30)
+    };
+});
+```
 
 ---
 
