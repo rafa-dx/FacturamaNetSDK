@@ -3,6 +3,9 @@ using FacturamaNetSDK.Http;
 using FacturamaNetSDK.Models.Client;
 using FacturamaNetSDK.Models.Client.Request;
 using FacturamaNetSDK.Models.Client.Response;
+using FacturamaNetSDK.Models.Filters;
+using FacturamaNetSDK.Utilities;
+using System.Runtime.CompilerServices;
 
 namespace FacturamaNetSDK.Endpoints;
 
@@ -28,7 +31,23 @@ public sealed class ClientEndpoint : IClientEndpoint
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        return _client.PostAsync<ClientResponse>(Resource, request, cancellationToken: cancellationToken);
+        return _client.PostAsync<ClientResponse>(
+            Resource, 
+            request, 
+            cancellationToken: cancellationToken);
+    }
+
+    /// <summary>
+    /// Elimina un cliente por ID.
+    /// </summary>
+    public Task DeleteAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        EnsureId(id);
+        return _client.DeleteAsync<ClientResponse>(
+            $"{Resource}/{id}", 
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -38,9 +57,10 @@ public sealed class ClientEndpoint : IClientEndpoint
         string id,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentNullException(nameof(id));
-        return _client.GetAsync<ClientResponse>($"{Resource}/{id}", cancellationToken: cancellationToken);
+        EnsureId(id);
+        return _client.GetAsync<ClientResponse>(
+            $"{Resource}/{id}", 
+            cancellationToken: cancellationToken);
     }
 
     /// <summary>
@@ -59,6 +79,19 @@ public sealed class ClientEndpoint : IClientEndpoint
         return result is null ? Array.Empty<ClientResponse>() : result.AsReadOnly();
     }
 
+    public Task<FilterClientResponse> ListAsync(
+        QueryOptions? filters = null,
+        CancellationToken cancellationToken = default)
+    {
+        var queryParams = filters is not null
+            ? QueryBuilder.FromObject(filters)
+            : null;
+        return _client.GetAsync<FilterClientResponse>(
+            Resource, 
+            queryParams, 
+            cancellationToken);
+    }
+
     /// <summary>
     /// Actualiza un cliente existente.
     /// </summary>
@@ -67,22 +100,12 @@ public sealed class ClientEndpoint : IClientEndpoint
         ClientRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentNullException(nameof(id));
+        EnsureId(id);
         ArgumentNullException.ThrowIfNull(request);
-        return _client.PutAsync<object>($"{Resource}/{id}", request, cancellationToken);
-    }
-
-    /// <summary>
-    /// Elimina un cliente por ID.
-    /// </summary>
-    public Task DeleteAsync(
-        string id,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentNullException(nameof(id));
-        return _client.DeleteAsync($"{Resource}/{id}", cancellationToken: cancellationToken);
+        return _client.PutAsync<object>(
+            $"{Resource}/{id}", 
+            request, 
+            cancellationToken);
     }
 
     /// <summary>
@@ -110,5 +133,11 @@ public sealed class ClientEndpoint : IClientEndpoint
         ArgumentNullException.ThrowIfNull(request);
         return _client.PostAsync<CustomerValidationResponse>(
             $"{CustomersResource}/validate", request, cancellationToken: cancellationToken);
+    }
+
+    private static void EnsureId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            throw new ArgumentNullException(nameof(id));
     }
 }
