@@ -2,6 +2,7 @@
 
 using FacturamaNetSDK.Client;
 using FacturamaNetSDK.Exceptions;
+using System.Security.Cryptography.X509Certificates;
 
 namespace FacturamaNetSDK.Sandbox.WebApiExamples
 {
@@ -23,9 +24,10 @@ namespace FacturamaNetSDK.Sandbox.WebApiExamples
             Console.WriteLine("========================================\n");
             try
             {
-                //await CreateAsync();
+                await CreateAsync();
                 //await GetAsync();
-                await ListAsync();
+                //await ListAsync();
+                await PutAsync();
             }
             catch (FacturamaValidationException ex)
             {
@@ -124,6 +126,40 @@ namespace FacturamaNetSDK.Sandbox.WebApiExamples
             }
             await _client.Products.DeleteAsync(_productId);
             Console.WriteLine($"Producto eliminado con ID: {_productId}");
+        }
+
+        private async Task PutAsync()
+        {
+            Console.WriteLine("--- Actualizar PRODUCT ---");
+            if (string.IsNullOrWhiteSpace(_productId))
+            {
+                Console.WriteLine("No hay un PRODUCT creado para actualizar.");
+                return;
+            }
+            var request = new Models.Product.Request.ProductRequest
+            {
+                Unit = "Pieza",
+                UnitCode = "H87",
+                IdentificationNumber = "1234567890",
+                Name = "Producto de prueba modificado",
+                Description = "Descripción del producto de prueba modificado",
+                Price = 100.00m,
+                CodeProdServ = "01010101",
+                ObjetoImp = "02",
+                Taxes = new List<Models.Common.Tax>
+                {
+                    new Models.Common.Tax
+                    {
+                        Name = "IVA",
+                        Rate = 0.16m,
+                        IsRetention = false,
+                        IsFederalTax = true,
+
+                    }
+                }
+            };
+            var response = await _client.Products.UpdateAsync(_productId, request);
+            Console.WriteLine($"Producto actualizado: {response.Name} (ID: {response.Id})");
         }
     }
 }

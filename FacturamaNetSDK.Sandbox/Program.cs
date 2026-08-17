@@ -27,9 +27,22 @@ var client = new FacturamaClient(options =>
     options.Retry = new RetryOptions
     {
         Enabled = true,
-        MaxRetries = 2,
+        MaxRetries = 5,
         BaseDelay = TimeSpan.FromSeconds(2),
         RetryPost = false,
+    };
+    // Ambas capas cuentan intentos, no operaciones: con MaxRetries = 2 cada operación consume
+    // hasta 3. Los umbrales toleran 2 operaciones completas fallidas antes de abrir.
+    options.CircuitBreaker = new CircuitBreakerOptions
+    {
+        Enabled = false,
+        // Capa 1 — racha de fallos consecutivos (cubre el volumen bajo).
+        //FailuresBeforeBreaking = 7,
+        // Capa 2 — proporción de fallos en ventana deslizante (cubre la degradación parcial).
+        //FailureRatio = 0.5,
+        //SamplingDuration = TimeSpan.FromSeconds(60),
+        //MinimumThroughput = 20,
+        //BreakDuration = TimeSpan.FromSeconds(30),
     };
 
 }, logger);
