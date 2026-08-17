@@ -84,7 +84,7 @@ namespace FacturamaNetSDK.Endpoints
             return _client.GetAsync<FilterProductResponse>(
                 ProductsResource,
                 queryParams,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken);
         }
 
         private static void EnsureId(string id)
