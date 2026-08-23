@@ -7,6 +7,13 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
 ## [Sin publicar]
 
 ### Añadido
+- **`FacturamaOptions.BaseUrlOverride`** para apuntar el SDK a un servidor local (mock server,
+  WireMock, contenedor) sin tocar `Environment`, que queda ignorado cuando el override está
+  presente. Se valida al construir el cliente —no en la primera petición— y exige URL absoluta
+  con esquema http/https; `http://` solo se admite en loopback, porque Basic Auth viaja en
+  base64 y apuntar a un host remoto sin TLS expondría las credenciales de la cuenta.
+- Sobrecarga `FacturamaClient(username, password, environment, logger)`: el ambiente explícito
+  ya estaba documentado como parte del entry point pero no existía en la superficie pública.
 - Documentación XML (`GenerateDocumentationFile`) y metadatos de paquete NuGet en el `.csproj`.
 - README con inicio rápido, manejo de errores y ejemplos reales.
 - Este CHANGELOG.

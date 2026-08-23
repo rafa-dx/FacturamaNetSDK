@@ -31,9 +31,24 @@ public sealed class FacturamaOptions
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
 
     /// <summary>
-    /// Obtiene la URL base según el ambiente configurado.
+    /// URL base explícita para escenarios de prueba local (mock server, WireMock, contenedor).
+    /// Cuando se especifica, <see cref="Environment"/> se ignora.
+    /// <para>
+    /// Debe ser una URL absoluta con esquema http o https. Se admite <c>http://</c> únicamente
+    /// en loopback: Basic Auth viaja en base64, así que apuntar a un host remoto sin TLS
+    /// expondría las credenciales de la cuenta.
+    /// </para>
     /// </summary>
-    internal string BaseUrl => Environment == FacturamaEnvironment.Production
+    public Uri? BaseUrlOverride { get; set; }
+
+    /// <summary>
+    /// URL base efectiva, sin diagonal final: <see cref="BaseUrlOverride"/> si está presente,
+    /// o la que corresponda al <see cref="Environment"/> configurado.
+    /// </summary>
+    internal string BaseUrl =>
+        BaseUrlOverride?.AbsoluteUri.TrimEnd('/') ?? EnvironmentBaseUrl;
+
+    private string EnvironmentBaseUrl => Environment == FacturamaEnvironment.Production
         ? "https://api.facturama.mx"
         : "https://apisandbox.facturama.mx";
 
@@ -51,7 +66,8 @@ public sealed class FacturamaOptions
     /// Valida que la configuración sea correcta.
     /// </summary>
     /// <exception cref="ArgumentException">
-    /// Cuando faltan credenciales o el umbral del breaker no tolera una operación completa.
+    /// Cuando faltan credenciales, <see cref="BaseUrlOverride"/> no es una URL http/https
+    /// absoluta y segura, o el umbral del breaker no tolera una operación completa.
     /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Cuando el timeout, los reintentos o los umbrales del breaker están fuera de rango.
@@ -67,9 +83,63 @@ public sealed class FacturamaOptions
         if (Timeout <= TimeSpan.Zero)
             throw new ArgumentOutOfRangeException(nameof(Timeout), Timeout, "Debe ser mayor a cero.");
 
+        ValidateBaseUrlOverride();
+
         Retry.Validate();
         CircuitBreaker.Validate();
         ValidateBreakerToleratesOneOperation();
+    }
+
+    /// <summary>
+    /// <see cref="BaseUrlOverride"/> es la única opción capaz de desviar el tráfico —y con él las
+    /// credenciales— a un host arbitrario, así que se valida al construir el cliente y no en la
+    /// fábrica: un error de configuración no debe aparecer recién en la primera petición.
+    /// </summary>
+    private void ValidateBaseUrlOverride()
+    {
+        if (BaseUrlOverride is null)
+            return;
+
+        RequireAbsoluteUrl(BaseUrlOverride);
+        RequireHttpScheme(BaseUrlOverride);
+        RequireTlsOutsideLoopback(BaseUrlOverride);
+    }
+
+    private static void RequireAbsoluteUrl(Uri url)
+    {
+        if (url.IsAbsoluteUri)
+            return;
+
+        throw new ArgumentException(
+            $"'{url}' no es una URL absoluta. Incluye el esquema y el host, " +
+            "p.ej. http://localhost:5000.",
+            nameof(BaseUrlOverride));
+    }
+
+    private static void RequireHttpScheme(Uri url)
+    {
+        if (url.Scheme is "http" or "https")
+            return;
+
+        throw new ArgumentException(
+            $"El esquema '{url.Scheme}' no está soportado. Usa http o https.",
+            nameof(BaseUrlOverride));
+    }
+
+    /// <summary>
+    /// Basic Auth envía usuario y contraseña en base64 —codificados, no cifrados—, así que
+    /// http sin TLS solo es aceptable contra la propia máquina.
+    /// </summary>
+    private static void RequireTlsOutsideLoopback(Uri url)
+    {
+        if (url.Scheme == "https" || url.IsLoopback)
+            return;
+
+        throw new ArgumentException(
+            $"'{url}' usa http:// contra un host remoto. Basic Auth enviaría las credenciales " +
+            "en base64 sin cifrar; usa https:// o un host de loopback " +
+            "(localhost, 127.0.0.1, [::1]).",
+            nameof(BaseUrlOverride));
     }
 
     /// <summary>
