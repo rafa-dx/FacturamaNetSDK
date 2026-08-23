@@ -2,6 +2,7 @@
 using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Models.Cfdi.Requests;
 using FacturamaNetSDK.Models.Cfdi.Responses;
 using FacturamaNetSDK.Models.Cfdi.Responses.CfdiLite;
@@ -41,7 +42,7 @@ public sealed class CfdiLiteEndpoint : ICfdiLiteEndpoint
         string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _liteVersionedClient.PostAsync<CfdiLiteResponse>(
             Resource,
             request,

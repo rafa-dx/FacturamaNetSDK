@@ -205,7 +205,14 @@ internal sealed class FacturamaHttpClientFactory
     /// <c>BaseDelay</c> es el multiplicador del primer intento, no la base del exponente.
     /// </summary>
     internal static TimeSpan BackoffDelay(RetryOptions retry, int attempt) =>
-        retry.BaseDelay * Math.Pow(2, attempt - 1);
+        Multiply(retry.BaseDelay, Math.Pow(2, attempt - 1));
+
+    /// <summary>
+    /// Multiplica una duración por un factor. El operador <c>*</c> de <see cref="TimeSpan"/> no
+    /// existe en netstandard2.0; esto replica su redondeo a ticks enteros.
+    /// </summary>
+    private static TimeSpan Multiply(TimeSpan duration, double factor) =>
+        TimeSpan.FromTicks((long)Math.Round(duration.Ticks * factor));
 
     /// <summary>
     /// Presupuesto total de la operación: todos los intentos más las esperas del backoff.
@@ -220,6 +227,6 @@ internal sealed class FacturamaHttpClientFactory
             backoff += BackoffDelay(options.Retry, attempt);
 
         var attempts = options.Retry.MaxRetries + 1;
-        return (options.Timeout * attempts) + backoff + SafetyMargin;
+        return Multiply(options.Timeout, attempts) + backoff + SafetyMargin;
     }
 }

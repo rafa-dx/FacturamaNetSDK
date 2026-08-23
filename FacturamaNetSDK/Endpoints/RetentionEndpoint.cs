@@ -1,5 +1,6 @@
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Models.Cfdi.Responses;
 using FacturamaNetSDK.Models.Filters;
 using FacturamaNetSDK.Models.Retentions.Request;
@@ -28,7 +29,7 @@ public sealed class RetentionEndpoint : IRetentionEndpoint
         RetentionRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PostAsync<RetentionResponse>(
             $"2/{Resource}",
             request,

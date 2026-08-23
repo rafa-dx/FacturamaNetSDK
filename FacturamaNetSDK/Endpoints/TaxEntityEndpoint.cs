@@ -1,5 +1,6 @@
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Models.TaxEntity.Request;
 using FacturamaNetSDK.Models.TaxEntity.Response;
 
@@ -32,7 +33,7 @@ public sealed class TaxEntityEndpoint : ITaxEntityEndpoint
         TaxEntityRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PutAsync<TaxEntityResponse>(
             Resource,
             request,
@@ -44,7 +45,7 @@ public sealed class TaxEntityEndpoint : ITaxEntityEndpoint
         TaxEntityLogoRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PutAsync<ImageResponse>(
             $"{Resource}/UploadLogo",
             request,

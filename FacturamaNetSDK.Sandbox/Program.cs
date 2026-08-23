@@ -17,10 +17,15 @@ Log.Logger = new LoggerConfiguration()
 var loggerFactory = new SerilogLoggerFactory(Log.Logger);
 var logger = loggerFactory.CreateLogger("FacturamaSDK");
 
+// Forma corta, equivalente a la configuración de abajo sin las opciones de resiliencia:
+//var client = new FacturamaClient(EnvironmentConfiguration.Username, EnvironmentConfiguration.Password, FacturamaEnvironment.Sandbox);
+
 // Pasar logger al cliente
 var client = new FacturamaClient(options =>
 {
     options.Environment = FacturamaEnvironment.Sandbox;
+    // Para probar contra un mock local (WireMock, contenedor). Gana sobre Environment:
+    //options.BaseUrlOverride = new Uri("http://localhost:7002/");
     options.Username = EnvironmentConfiguration.Username;
     options.Password = EnvironmentConfiguration.Password;
     //options.ApiLiteVersion = ApiLiteVersion.V3;

@@ -2,6 +2,7 @@
 using FacturamaNetSDK.Endpoints;
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace FacturamaNetSDK.Client;
@@ -81,11 +82,27 @@ public sealed class FacturamaClient : IDisposable
     { }
 
     /// <summary>
+    /// Inicializa el cliente con credenciales y un ambiente explícito.
+    /// </summary>
+    /// <param name="username">Usuario de la cuenta de Facturama.</param>
+    /// <param name="password">Contraseña de la cuenta de Facturama.</param>
+    /// <param name="environment">Ambiente destino: <see cref="FacturamaEnvironment.Sandbox"/> o <see cref="FacturamaEnvironment.Production"/>.</param>
+    /// <param name="logger">Logger opcional para trazas de peticiones y resiliencia.</param>
+    public FacturamaClient(string username, string password, FacturamaEnvironment environment, ILogger? logger = null)
+        : this(options =>
+        {
+            options.Username = username;
+            options.Password = password;
+            options.Environment = environment;
+        }, logger)
+    { }
+
+    /// <summary>
     /// Inicializa el cliente con configuración avanzada.
     /// </summary>
     public FacturamaClient(Action<FacturamaOptions> configure, ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(configure);
+        Guard.NotNull(configure, nameof(configure));
 
         var options = new FacturamaOptions();
         configure(options);
