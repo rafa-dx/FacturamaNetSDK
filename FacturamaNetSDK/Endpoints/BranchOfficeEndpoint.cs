@@ -1,5 +1,6 @@
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Models.BranchOffice.Request;
 using FacturamaNetSDK.Models.BranchOffice.Response;
 
@@ -23,7 +24,7 @@ public sealed class BranchOfficeEndpoint : IBranchOfficeEndpoint
         BranchOfficeRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PostAsync<BranchOfficeResponse>(
             Resource,
             request,
@@ -38,7 +39,7 @@ public sealed class BranchOfficeEndpoint : IBranchOfficeEndpoint
     {
         if (string.IsNullOrWhiteSpace(branchOfficeId))
             throw new ArgumentNullException(nameof(branchOfficeId));
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PutAsync<BranchOfficeResponse>(
             $"{Resource}/{branchOfficeId}",
             request,

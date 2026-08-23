@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
 
-    <!-- Solo en pruebas: habilita literales de cadena sin formato (""") para los JSON de
-         ejemplo. El SDK sigue compilando con el C# 10 por defecto de net6.0. -->
-    <LangVersion>11.0</LangVersion>
+    <!-- Las pruebas usan el C# 12 por defecto de net8.0 (literales de cadena sin formato para
+         los JSON de ejemplo). El SDK sigue fijado en C# 10 por su target netstandard2.0.
+         ⚠️ Este TFM resuelve el asset net8.0 del SDK: las ramas #if de netstandard2.0 se
+         compilan pero no se ejecutan aquí. Ver nota en el CHANGELOG. -->
   </PropertyGroup>
 
   <ItemGroup>

@@ -10,8 +10,29 @@ Cubre CFDI (API Web y API Lite multiemisor), clientes, catálogos del SAT y rete
 
 ## Requisitos
 
-- .NET 6.0 o superior
-- Credenciales de Facturama (usuario y contraseña). Regístrate para el entorno sandbox en [Facturama](https://facturama.mx).
+El paquete multiplataforma dos targets:
+
+| Target | Cubre |
+|--------|-------|
+| `net8.0` | .NET 8 y superior |
+| `netstandard2.0` | .NET Framework 4.6.1+, .NET Core 2.0+, .NET 5/6/7, Mono, Xamarin |
+
+También necesitas credenciales de Facturama (usuario y contraseña). Regístrate para el entorno sandbox en [Facturama](https://facturama.mx).
+
+### Notas para consumidores en .NET Framework
+
+En `netstandard2.0` el SDK trae `System.Text.Json` como paquete (en `net8.0` viene en el
+framework compartido). Si tu proyecto es .NET Framework:
+
+- Habilita `<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>`. Sin los
+  redirects, `System.Text.Json` y sus dependencias (`System.Memory`, `System.Buffers`)
+  fallan al cargar en tiempo de ejecución.
+- Usa .NET Framework **4.7 o superior**, o habilita TLS 1.2 explícitamente
+  (`ServicePointManager.SecurityProtocol`). La API de Facturama exige TLS 1.2 y las
+  versiones anteriores no lo activan por defecto.
+- Un timeout de red se reporta igual como `FacturamaTimeoutException`, pero el
+  `CancellationToken` no interrumpe la lectura del cuerpo de la respuesta una vez iniciada:
+  ahí el corte lo pone el timeout de la petición.
 
 ## Instalación
 

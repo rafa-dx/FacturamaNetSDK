@@ -1,5 +1,6 @@
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Models.Filters;
 using FacturamaNetSDK.Models.Product.Request;
 using FacturamaNetSDK.Models.Product.Response;
@@ -28,7 +29,7 @@ namespace FacturamaNetSDK.Endpoints
             string? idempotencyKey = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(request);
+            Guard.NotNull(request, nameof(request));
             return _client.PostAsync<ProductResponse>(
                 Resource,
                 request,
@@ -65,7 +66,7 @@ namespace FacturamaNetSDK.Endpoints
             CancellationToken cancellationToken = default)
         {
             EnsureId(id);
-            ArgumentNullException.ThrowIfNull(request);
+            Guard.NotNull(request, nameof(request));
             return _client.PutAsync<ProductResponse>(
                 $"{Resource}/{id}",
                 request,

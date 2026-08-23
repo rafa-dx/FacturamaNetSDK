@@ -1,4 +1,5 @@
 using FacturamaNetSDK.Exceptions;
+using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Serialization;
 using Polly.CircuitBreaker;
 using Polly.Timeout;
@@ -142,7 +143,7 @@ internal sealed class FacturamaHttpClient : IDisposable
             if (!response.IsSuccessStatusCode)
                 await ThrowFacturamaExceptionAsync(response, cancellationToken).ConfigureAwait(false);
 
-            return await response.Content.ReadAsByteArrayAsync(cancellationToken)
+            return await response.Content.ReadByteArrayAsync(cancellationToken)
                 .ConfigureAwait(false);
         }, cancellationToken);
     }
@@ -196,10 +197,12 @@ internal sealed class FacturamaHttpClient : IDisposable
 
             HttpRequestException ex => new FacturamaConnectionException(ex),
 
-            // El timeout de HttpClient se manifiesta como TaskCanceledException con
-            // TimeoutException interna (net6+). Es la señal determinista; el chequeo del
-            // token queda como respaldo para cancelaciones que no son del consumidor.
-            TaskCanceledException ex when ex.InnerException is TimeoutException
+            // En net5+ el timeout de HttpClient se manifiesta como TaskCanceledException con
+            // TimeoutException en la cadena de excepciones internas: es la señal determinista.
+            // En netstandard2.0 (p.ej. .NET Framework) esa interna no llega, así que ahí el
+            // timeout se detecta por el respaldo de abajo: se canceló sin que el consumidor
+            // lo pidiera.
+            TaskCanceledException ex when HasTimeoutInChain(ex)
                 => new FacturamaTimeoutException(ex),
 
             TaskCanceledException ex when !cancellationToken.IsCancellationRequested
@@ -207,6 +210,22 @@ internal sealed class FacturamaHttpClient : IDisposable
 
             _ => null
         };
+
+    /// <summary>
+    /// Busca una <see cref="TimeoutException"/> en toda la cadena de excepciones internas.
+    /// No basta con mirar el primer nivel: net8 envuelve el timeout del handler en una
+    /// <see cref="TaskCanceledException"/> adicional y deja la señal un nivel más abajo.
+    /// </summary>
+    private static bool HasTimeoutInChain(Exception exception)
+    {
+        for (var inner = exception.InnerException; inner is not null; inner = inner.InnerException)
+        {
+            if (inner is TimeoutException)
+                return true;
+        }
+
+        return false;
+    }
 
     // -------------------------------------------------------------------------
     // Helpers privados
@@ -231,7 +250,7 @@ internal sealed class FacturamaHttpClient : IDisposable
             return default!;
         }
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken)
+        var json = await response.Content.ReadStringAsync(cancellationToken)
             .ConfigureAwait(false);
 
         return Deserialize<T>(json);
@@ -256,35 +275,46 @@ internal sealed class FacturamaHttpClient : IDisposable
         HttpResponseMessage response,
         CancellationToken cancellationToken)
     {
-        var content = await response.Content.ReadAsStringAsync(cancellationToken)
+        var content = await response.Content.ReadStringAsync(cancellationToken)
             .ConfigureAwait(false);
 
         throw MapStatusCode(response, content);
     }
 
+    /// <summary>
+    /// Códigos que el SDK traduce. Se comparan como enteros porque 422 y 429 no existen en el
+    /// enum <see cref="HttpStatusCode"/> de netstandard2.0.
+    /// </summary>
+    private static class Status
+    {
+        internal const int BadRequest = 400;
+        internal const int Unauthorized = 401;
+        internal const int NotFound = 404;
+        internal const int UnprocessableEntity = 422;
+        internal const int TooManyRequests = 429;
+        internal const int FirstServerError = 500;
+    }
+
     private FacturamaException MapStatusCode(HttpResponseMessage response, string content) =>
-        response.StatusCode switch
+        (int)response.StatusCode switch
         {
-            HttpStatusCode.Unauthorized =>
+            Status.Unauthorized =>
                 new FacturamaAuthenticationException(),
 
-            HttpStatusCode.NotFound =>
+            Status.NotFound =>
                 new FacturamaNotFoundException(response.RequestMessage?.RequestUri?.ToString() ?? string.Empty),
 
-            HttpStatusCode.BadRequest or HttpStatusCode.UnprocessableEntity =>
+            Status.BadRequest or Status.UnprocessableEntity =>
                 new FacturamaValidationException(content),
 
-            HttpStatusCode.TooManyRequests =>
+            Status.TooManyRequests =>
                 new FacturamaRateLimitException(RetryAfter(response)),
 
-            HttpStatusCode.InternalServerError =>
-                new FacturamaServerException(500),
+            var status when status >= Status.FirstServerError =>
+                new FacturamaServerException(status),
 
-            _ when (int)response.StatusCode >= 500 =>
-                new FacturamaServerException((int)response.StatusCode),
-
-            _ =>
-                new FacturamaException($"Error inesperado: {(int)response.StatusCode}", (int)response.StatusCode)
+            var status =>
+                new FacturamaException($"Error inesperado: {status}", status)
         };
 
     private TimeSpan? RetryAfter(HttpResponseMessage response) =>

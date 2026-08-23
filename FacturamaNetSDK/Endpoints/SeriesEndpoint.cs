@@ -1,5 +1,6 @@
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Models.Series.Request;
 using FacturamaNetSDK.Models.Series.Response;
 
@@ -47,7 +48,7 @@ public sealed class SeriesEndpoint : ISeriesEndpoint
     {
         if (string.IsNullOrWhiteSpace(branchOfficeId))
             throw new ArgumentNullException(nameof(branchOfficeId));
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PostAsync<SerieResponse>(
             $"{Resource}/{branchOfficeId}",
             request,

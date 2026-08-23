@@ -2,6 +2,7 @@
 using FacturamaNetSDK.Endpoints;
 using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace FacturamaNetSDK.Client;
@@ -101,7 +102,7 @@ public sealed class FacturamaClient : IDisposable
     /// </summary>
     public FacturamaClient(Action<FacturamaOptions> configure, ILogger? logger = null)
     {
-        ArgumentNullException.ThrowIfNull(configure);
+        Guard.NotNull(configure, nameof(configure));
 
         var options = new FacturamaOptions();
         configure(options);

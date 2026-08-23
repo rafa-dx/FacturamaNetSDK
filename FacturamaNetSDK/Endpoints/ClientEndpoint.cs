@@ -1,5 +1,6 @@
 ﻿using FacturamaNetSDK.Endpoints.Abstractions;
 using FacturamaNetSDK.Http;
+using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Models.Client;
 using FacturamaNetSDK.Models.Client.Request;
 using FacturamaNetSDK.Models.Client.Response;
@@ -30,7 +31,7 @@ public sealed class ClientEndpoint : IClientEndpoint
         ClientRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PostAsync<ClientResponse>(
             Resource, 
             request, 
@@ -101,7 +102,7 @@ public sealed class ClientEndpoint : IClientEndpoint
         CancellationToken cancellationToken = default)
     {
         EnsureId(id);
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PutAsync<object>(
             $"{Resource}/{id}", 
             request, 
@@ -130,7 +131,7 @@ public sealed class ClientEndpoint : IClientEndpoint
         CustomerValidationRequest request,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        Guard.NotNull(request, nameof(request));
         return _client.PostAsync<CustomerValidationResponse>(
             $"{CustomersResource}/validate", request, cancellationToken: cancellationToken);
     }
