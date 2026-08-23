@@ -14,12 +14,33 @@ y el versionado sigue [SemVer](https://semver.org/lang/es/).
   base64 y apuntar a un host remoto sin TLS expondría las credenciales de la cuenta.
 - Sobrecarga `FacturamaClient(username, password, environment, logger)`: el ambiente explícito
   ya estaba documentado como parte del entry point pero no existía en la superficie pública.
+- **Circuit breaker en dos capas encadenadas.** A la de racha existente (`CircuitBreakerAsync`)
+  se suma una de proporción (`AdvancedCircuitBreakerAsync`): `FailureRatio`, `SamplingDuration`
+  y `MinimumThroughput` en `CircuitBreakerOptions`. Cada capa cubre el punto ciego de la otra —
+  la racha protege al consumidor de bajo volumen, el ratio detecta degradación parcial bajo
+  carga. Cualquiera de las dos abre el circuito y ambas comparten `BreakDuration`.
+- Validación cruzada entre `CircuitBreakerOptions` y `RetryOptions`: `FailuresBeforeBreaking` y
+  `MinimumThroughput` deben superar `MaxRetries + 1`. Ambas capas cuentan intentos y no
+  operaciones, así que un umbral por debajo hacía que una única petición fallida dejara el
+  circuito abierto para toda la cuenta.
+- Proyecto de pruebas: cobertura de la validación de opciones y del comportamiento de las dos
+  capas del breaker (apertura, ventana deslizante, estado compartido entre verbos, half-open).
 - Documentación XML (`GenerateDocumentationFile`) y metadatos de paquete NuGet en el `.csproj`.
 - README con inicio rápido, manejo de errores y ejemplos reales.
 - Este CHANGELOG.
 - Comentarios XML en los modelos de request principales (CfdiRequest, Item, Receiver, Issuer).
 
 ### Cambiado
+- **Default de `CircuitBreakerOptions.FailuresBeforeBreaking`: 5 → 10.** Con 4 intentos por
+  operación, el valor anterior abría el circuito a mitad de la segunda operación fallida.
+  Al haber ahora una segunda capa que cubre la degradación parcial, ninguna necesita ser
+  agresiva. ⚠️ Umbral a definir con el equipo.
+- `CircuitBreakerOptions` pasó de `class` a `record` (consistente con `RetryOptions`) y recibió
+  documentación XML completa.
+- `RetryOptions.validate()` → `Validate()`, y ahora valida de verdad: `MaxRetries` entre 0 y 10
+  (el tope evita que el backoff exponencial desborde el `TimeSpan` del presupuesto total) y
+  `BaseDelay` mayor a cero.
+- `FacturamaOptions.Validate` valida también que `Timeout` sea mayor a cero.
 - Namespaces unificados bajo `FacturamaNetSDK.*` (se eliminaron restos de otros SDKs
   `Facturama.Sdk.Core.*` / `FacturamaAPI.src.*` y el typo `FacturamaNetSDk`).
 - `ItemResponse` de CFDI unificado en `Models/Cfdi/Responses/Common/` (era duplicado idéntico
