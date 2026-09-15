@@ -1,0 +1,247 @@
+# EditorConfig para FacturamaNetSDK
+# https://editorconfig.org  ·  https://learn.microsoft.com/dotnet/fundamentals/code-analysis/
+#
+# Objetivo: fijar el estilo que ya usa el código y elevar a error las reglas cuyo
+# incumplimiento rompe a los consumidores de una librería pública (ConfigureAwait,
+# propagación de CancellationToken).
+#
+# Ámbito: este archivo es la raíz. Las secciones más específicas de abajo ganan.
+
+root = true
+
+# ---------------------------------------------------------------------------
+# Todos los archivos
+# ---------------------------------------------------------------------------
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{md,markdown}]
+# Markdown usa dos espacios finales como salto de línea duro.
+trim_trailing_whitespace = false
+indent_size = 2
+
+[*.{json,yml,yaml}]
+indent_size = 2
+
+[*.{csproj,slnx,props,targets,config,xml}]
+indent_size = 2
+# BOM explícito: los comentarios de los .csproj llevan acentos y emojis, y sin BOM
+# las herramientas de Windows que asumen ANSI los leen como mojibake.
+charset = utf-8-bom
+
+# ===========================================================================
+# C# — reglas comunes a todos los proyectos
+# ===========================================================================
+[*.cs]
+charset = utf-8-bom
+
+# --- Organización de using ---
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+csharp_using_directive_placement = outside_namespace:suggestion
+
+# --- Formato: llaves y saltos de línea (estilo Allman, el del código actual) ---
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_new_line_before_members_in_object_initializers = true
+csharp_new_line_before_members_in_anonymous_types = true
+csharp_new_line_between_query_expression_clauses = true
+
+# --- Formato: indentación ---
+csharp_indent_case_contents = true
+csharp_indent_case_contents_when_block = false
+csharp_indent_switch_labels = true
+csharp_indent_labels = one_less_than_current
+csharp_indent_block_contents = true
+csharp_indent_braces = false
+
+# --- Formato: espaciado ---
+csharp_space_after_cast = false
+csharp_space_after_keywords_in_control_flow_statements = true
+csharp_space_before_colon_in_inheritance_clause = true
+csharp_space_after_colon_in_inheritance_clause = true
+csharp_space_around_binary_operators = before_and_after
+csharp_space_between_method_declaration_parameter_list_parentheses = false
+csharp_space_between_method_call_parameter_list_parentheses = false
+csharp_space_between_parentheses = false
+csharp_space_between_square_brackets = false
+
+# --- Formato: saltos ---
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
+
+# ---------------------------------------------------------------------------
+# Estilo del lenguaje
+# ---------------------------------------------------------------------------
+
+# `this.` innecesario: el código usa el prefijo _ en campos, no this.
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+
+# Tipos predefinidos (string, int) en lugar de los del framework (String, Int32).
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning
+dotnet_style_predefined_type_for_member_access = true:warning
+
+# `var` cuando el tipo es evidente — patrón dominante en el SDK.
+csharp_style_var_for_built_in_types = false:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = false:suggestion
+
+# Modificadores
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:warning
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:warning
+dotnet_style_readonly_field = true:warning
+
+# Expresiones y patrones modernos disponibles en C# 10.
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = when_on_single_line:suggestion
+csharp_style_expression_bodied_accessors = when_on_single_line:suggestion
+csharp_style_expression_bodied_constructors = false:suggestion
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+csharp_style_prefer_switch_expression = true:suggestion
+csharp_style_prefer_pattern_matching = true:suggestion
+csharp_style_prefer_not_pattern = true:suggestion
+csharp_style_throw_expression = true:suggestion
+csharp_style_conditional_delegate_call = true:warning
+dotnet_style_coalesce_expression = true:warning
+dotnet_style_null_propagation = true:warning
+dotnet_style_prefer_conditional_expression_over_assignment = true:suggestion
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+dotnet_style_explicit_tuple_names = true:warning
+
+# `namespace X;` — el SDK está mixto (ProductEndpoint usa bloque). Sugerencia, no error,
+# para no forzar un rewrite masivo antes de 1.0.0.
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+# Llaves obligatorias salvo en una sola línea: el código usa `if (x) throw ...;`.
+csharp_prefer_braces = when_multiline:suggestion
+csharp_style_prefer_method_group_conversion = true:suggestion
+
+# --- No usar (C# 11+ o net8-only): el SDK compila netstandard2.0 con LangVersion 10 ---
+csharp_style_prefer_utf8_string_literals = false:none
+csharp_style_prefer_primary_constructors = false:none
+dotnet_diagnostic.IDE0300.severity = none  # colección literal []  — C# 12
+dotnet_diagnostic.IDE0301.severity = none
+dotnet_diagnostic.IDE0302.severity = none
+dotnet_diagnostic.IDE0303.severity = none
+dotnet_diagnostic.IDE0304.severity = none
+dotnet_diagnostic.IDE0305.severity = none
+
+# ---------------------------------------------------------------------------
+# Convenciones de nombres
+# ---------------------------------------------------------------------------
+
+# Campos privados de instancia: _camelCase
+dotnet_naming_rule.private_fields_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_underscore.style = underscore_camel_case
+dotnet_naming_rule.private_fields_underscore.severity = warning
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers =
+dotnet_naming_style.underscore_camel_case.capitalization = camel_case
+dotnet_naming_style.underscore_camel_case.required_prefix = _
+
+# Constantes: PascalCase (el SDK usa `private const string Resource`)
+dotnet_naming_rule.constants_pascal.symbols = constants
+dotnet_naming_rule.constants_pascal.style = pascal_case
+dotnet_naming_rule.constants_pascal.severity = warning
+dotnet_naming_symbols.constants.applicable_kinds = field
+dotnet_naming_symbols.constants.applicable_accessibilities = *
+dotnet_naming_symbols.constants.required_modifiers = const
+
+# Interfaces: prefijo I
+dotnet_naming_rule.interfaces_prefixed_i.symbols = interfaces
+dotnet_naming_rule.interfaces_prefixed_i.style = prefix_i_pascal
+dotnet_naming_rule.interfaces_prefixed_i.severity = warning
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.interfaces.applicable_accessibilities = *
+dotnet_naming_style.prefix_i_pascal.capitalization = pascal_case
+dotnet_naming_style.prefix_i_pascal.required_prefix = I
+
+# Métodos asíncronos: sufijo Async
+dotnet_naming_rule.async_methods_suffix.symbols = async_methods
+dotnet_naming_rule.async_methods_suffix.style = suffix_async
+dotnet_naming_rule.async_methods_suffix.severity = warning
+dotnet_naming_symbols.async_methods.applicable_kinds = method
+dotnet_naming_symbols.async_methods.applicable_accessibilities = public,internal,protected
+dotnet_naming_symbols.async_methods.required_modifiers = async
+dotnet_naming_style.suffix_async.capitalization = pascal_case
+dotnet_naming_style.suffix_async.required_suffix = Async
+
+# Miembros públicos: PascalCase
+dotnet_naming_rule.public_members_pascal.symbols = public_members
+dotnet_naming_rule.public_members_pascal.style = pascal_case
+dotnet_naming_rule.public_members_pascal.severity = warning
+dotnet_naming_symbols.public_members.applicable_kinds = property,method,event,field,namespace,class,struct,enum,delegate
+dotnet_naming_symbols.public_members.applicable_accessibilities = public,internal,protected
+dotnet_naming_style.pascal_case.capitalization = pascal_case
+
+# ===========================================================================
+# Analizadores — solo la librería publicada
+# ===========================================================================
+[FacturamaNetSDK/**.cs]
+
+# --- Error: incumplirlas rompe al consumidor ---
+
+# CA2007: falta ConfigureAwait(false). Sin esto, un consumidor en un contexto de
+# sincronización (WinForms/WPF/ASP.NET clásico) puede sufrir deadlock al llamar al SDK.
+dotnet_diagnostic.CA2007.severity = error
+
+# CA2016: no propagar el CancellationToken al método interno. Deja al consumidor sin
+# poder cancelar de verdad, aunque la firma sugiera que sí.
+dotnet_diagnostic.CA2016.severity = error
+
+# CA1816 / CA1063: patrón Dispose mal implementado — fuga de HttpClient.
+dotnet_diagnostic.CA1816.severity = error
+dotnet_diagnostic.CA1063.severity = error
+
+# --- Warning: correctitud y superficie pública ---
+
+# Campos públicos en lugar de propiedades: congela la ABI.
+dotnet_diagnostic.CA1051.severity = warning
+# Excepciones sin los constructores estándar.
+dotnet_diagnostic.CA1032.severity = warning
+# StringComparison / CultureInfo explícitos: el SDK compara RFC y rutas.
+dotnet_diagnostic.CA1307.severity = warning
+dotnet_diagnostic.CA1305.severity = warning
+# Uri en lugar de string donde aplique.
+dotnet_diagnostic.CA1054.severity = suggestion
+dotnet_diagnostic.CA1056.severity = suggestion
+# Miembro privado sin usar. En suggestion a propósito: `_newGuid` de FacturamaHttpClient
+# está deliberadamente sin uso mientras la idempotencia esté deshabilitada.
+dotnet_diagnostic.IDE0052.severity = suggestion
+
+# --- Nullabilidad: DEUDA TÉCNICA CONOCIDA ---
+# CS8618 (propiedad no anulable sin inicializar) aporta el ~97 % de los avisos del build.
+# NO se silencia: el arreglo es tipar bien los modelos (Fase 4), no esconder el aviso.
+# Si algún día se silencia, debe ser una decisión explícita del equipo, no un descuido.
+dotnet_diagnostic.CS8618.severity = warning
+
+# ===========================================================================
+# Pruebas y Sandbox — no son superficie pública
+# ===========================================================================
+[{FacturamaNetSDK.Tests,FacturamaNetSDK.Sandbox}/**.cs]
+
+# ConfigureAwait no aplica: xUnit no instala contexto de sincronización y el Sandbox
+# es una consola. Exigirlo aquí sería ruido puro.
+dotnet_diagnostic.CA2007.severity = none
+
+# Los métodos [Fact]/[Theory] no llevan sufijo Async por convención de xUnit,
+# y los nombres de prueba son frases descriptivas.
+dotnet_naming_rule.async_methods_suffix.severity = none
+
+# Datos de prueba y ejemplos: nullabilidad y cultura no son relevantes.
+dotnet_diagnostic.CS8618.severity = suggestion
+dotnet_diagnostic.CA1305.severity = none
+dotnet_diagnostic.CA1307.severity = none

@@ -1,4 +1,4 @@
-using FacturamaNetSDK.Configuration;
+﻿using FacturamaNetSDK.Configuration;
 using FacturamaNetSDK.Http;
 using FacturamaNetSDK.Tests.TestDoubles;
 using Microsoft.Extensions.Logging;
@@ -10,9 +10,9 @@ using System.Net;
 namespace FacturamaNetSDK.Tests.Http;
 
 /// <summary>
-/// Comportamiento de las dos capas del circuit breaker construidas desde
-/// <see cref="CircuitBreakerOptions"/>. Ejercita la política directamente, sin red: el delegado
-/// cuenta cuántos intentos la atraviesan realmente.
+/// Comportamiento del circuit breaker construido desde <see cref="CircuitBreakerOptions"/>.
+/// Ejercita la política directamente, sin red: el delegado cuenta cuántos intentos la
+/// atraviesan realmente.
 /// </summary>
 public sealed class CircuitBreakerPolicyTests
 {
@@ -22,32 +22,11 @@ public sealed class CircuitBreakerPolicyTests
 
     private static readonly TimeSpan LongBreak = TimeSpan.FromMinutes(1);
 
-    /// <summary>
-    /// Aísla la capa de racha: un <c>MinimumThroughput</c> inalcanzable deja fuera de juego
-    /// a la de ratio.
-    /// </summary>
-    private static CircuitBreakerOptions ConsecutiveOnly(int failures) =>
+    private static CircuitBreakerOptions Breaker(int failures) =>
         new()
         {
             FailuresBeforeBreaking = failures,
-            BreakDuration = LongBreak,
-            MinimumThroughput = 1_000
-        };
-
-    /// <summary>
-    /// Aísla la capa de ratio: un umbral de racha inalcanzable deja fuera de juego a la otra.
-    /// </summary>
-    private static CircuitBreakerOptions RatioOnly(
-        double ratio,
-        int minimumThroughput,
-        TimeSpan? sampling = null) =>
-        new()
-        {
-            FailuresBeforeBreaking = 1_000,
-            BreakDuration = LongBreak,
-            FailureRatio = ratio,
-            MinimumThroughput = minimumThroughput,
-            SamplingDuration = sampling ?? TimeSpan.FromMinutes(5)
+            BreakDuration = LongBreak
         };
 
     private static Func<HttpRequestMessage, IAsyncPolicy<HttpResponseMessage>> SelectorFor(
@@ -117,7 +96,7 @@ public sealed class CircuitBreakerPolicyTests
     [Fact]
     public async Task Racha_AlAlcanzarElUmbral_AbreYDejaDeTocarLaRed()
     {
-        var policy = PolicyFor(NoRetry, ConsecutiveOnly(failures: 3));
+        var policy = PolicyFor(NoRetry, Breaker(failures: 3));
         var call = new FailingCall();
 
         for (var i = 0; i < 3; i++)
@@ -132,7 +111,7 @@ public sealed class CircuitBreakerPolicyTests
     [Fact]
     public async Task Racha_PorDebajoDelUmbral_MantieneElCircuitoCerrado()
     {
-        var policy = PolicyFor(NoRetry, ConsecutiveOnly(failures: 4));
+        var policy = PolicyFor(NoRetry, Breaker(failures: 4));
         var call = new FailingCall();
 
         for (var i = 0; i < 3; i++)
@@ -145,13 +124,12 @@ public sealed class CircuitBreakerPolicyTests
     }
 
     /// <summary>
-    /// Un éxito intercalado reinicia el contador: esta capa cuenta fallos <b>consecutivos</b>.
-    /// Es su punto ciego, y la razón de existir de la capa de ratio.
+    /// Un éxito intercalado reinicia el contador: el breaker cuenta fallos <b>consecutivos</b>.
     /// </summary>
     [Fact]
     public async Task Racha_UnExitoIntercalado_ReiniciaElContadorDeFallos()
     {
-        var policy = PolicyFor(NoRetry, ConsecutiveOnly(failures: 3));
+        var policy = PolicyFor(NoRetry, Breaker(failures: 3));
         var call = new FailingCall();
 
         var opened = await AlternateUntilBroken(policy, call, maxIterations: 30);
@@ -159,155 +137,25 @@ public sealed class CircuitBreakerPolicyTests
         Assert.False(opened, "Alternando fallo/éxito nunca hay 3 fallos seguidos.");
     }
 
-    // -------------------------------------------------------------------------
-    // Capa 2 — proporción de fallos en ventana deslizante
-    // -------------------------------------------------------------------------
-
     /// <summary>
-    /// Contrapunto exacto de <see cref="Racha_UnExitoIntercalado_ReiniciaElContadorDeFallos"/>:
-    /// con el mismo tráfico donde la racha jamás dispara, el ratio sí detecta la degradación.
+    /// El punto ciego de la racha, explícito: una API con degradación <b>parcial</b> —que
+    /// alterna fallos y éxitos— no abre el circuito por muchas operaciones que fallen.
+    /// <para>
+    /// Cubrirlo exigiría una política por proporción sobre ventana deslizante. Se evaluó y se
+    /// dejó fuera de 1.0.0: requiere un volumen sostenido que un consumidor de facturación
+    /// típico no alcanza, y añadir opciones después no rompe a nadie, quitarlas sí.
+    /// </para>
     /// </summary>
     [Fact]
-    public async Task Ratio_ConExitosIntercalados_AbrePorProporcion()
-    {
-        var policy = PolicyFor(NoRetry, RatioOnly(ratio: 0.5, minimumThroughput: 10));
-        var call = new FailingCall();
-
-        var opened = await AlternateUntilBroken(policy, call);
-
-        Assert.True(opened, "Con 50% de fallos sostenido el ratio debe abrir el circuito.");
-    }
-
-    /// <summary>
-    /// Punto ciego de esta capa: por debajo de <c>MinimumThroughput</c> no actúa nunca, por
-    /// muchos fallos consecutivos que haya. De ese escenario se encarga la capa de racha.
-    /// </summary>
-    [Fact]
-    public async Task Ratio_PorDebajoDelThroughputMinimo_NoAbreNunca()
-    {
-        var policy = PolicyFor(NoRetry, RatioOnly(ratio: 0.5, minimumThroughput: 10));
-        var call = new FailingCall();
-
-        for (var i = 0; i < 9; i++)
-            await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
-
-        Assert.Equal(9, call.Calls);
-    }
-
-    [Fact]
-    public async Task Ratio_AlAlcanzarElThroughputConTodoFallos_Abre()
-    {
-        var policy = PolicyFor(NoRetry, RatioOnly(ratio: 0.5, minimumThroughput: 5));
-        var call = new FailingCall();
-
-        for (var i = 0; i < 5; i++)
-            await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
-
-        await Assert.ThrowsAnyAsync<BrokenCircuitException>(
-            () => policy.ExecuteAsync(call.Invoke, CancellationToken.None));
-
-        Assert.Equal(5, call.Calls);
-    }
-
-    /// <summary>La ventana es deslizante: los fallos anteriores a ella se olvidan.</summary>
-    [Fact]
-    public async Task Ratio_OlvidaLosFallosFueraDeLaVentana()
-    {
-        var policy = PolicyFor(
-            NoRetry,
-            RatioOnly(ratio: 0.5, minimumThroughput: 4, sampling: TimeSpan.FromMilliseconds(300)));
-        var call = new FailingCall();
-
-        for (var i = 0; i < 3; i++)
-            await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
-
-        await Task.Delay(TimeSpan.FromMilliseconds(600));
-
-        var response = await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
-
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Equal(4, call.Calls);
-    }
-
-    // -------------------------------------------------------------------------
-    // Las dos capas encadenadas
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Consumidor de bajo volumen: nunca alcanza el <c>MinimumThroughput</c> del ratio, así que
-    /// la protección tiene que venir de la racha.
-    /// </summary>
-    [Fact]
-    public async Task Encadenadas_LaRachaCubreElVolumenBajo()
-    {
-        var breaker = new CircuitBreakerOptions
-        {
-            FailuresBeforeBreaking = 3,
-            MinimumThroughput = 50,
-            BreakDuration = LongBreak
-        };
-        var policy = PolicyFor(NoRetry, breaker);
-        var call = new FailingCall();
-
-        for (var i = 0; i < 3; i++)
-            await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
-
-        await Assert.ThrowsAnyAsync<BrokenCircuitException>(
-            () => policy.ExecuteAsync(call.Invoke, CancellationToken.None));
-
-        Assert.Equal(3, call.Calls);
-    }
-
-    /// <summary>
-    /// Degradación parcial bajo carga: nunca hay 3 fallos seguidos, así que la racha no dispara
-    /// y la protección tiene que venir del ratio.
-    /// </summary>
-    [Fact]
-    public async Task Encadenadas_ElRatioCubreLaDegradacionParcial()
-    {
-        var breaker = new CircuitBreakerOptions
-        {
-            FailuresBeforeBreaking = 3,
-            FailureRatio = 0.5,
-            MinimumThroughput = 10,
-            SamplingDuration = TimeSpan.FromMinutes(5),
-            BreakDuration = LongBreak
-        };
-        var policy = PolicyFor(NoRetry, breaker);
-        var call = new FailingCall();
-
-        var opened = await AlternateUntilBroken(policy, call);
-
-        Assert.True(opened);
-    }
-
-    /// <summary>
-    /// Sin cascada entre capas: cuando la de ratio (interna) abre, su
-    /// <c>BrokenCircuitException</c> no está entre los fallos que maneja la de racha (externa),
-    /// así que esta no la cuenta ni abre a su vez. El log reporta una sola capa, la culpable.
-    /// </summary>
-    [Fact]
-    public async Task Encadenadas_LaAperturaDeUnaCapaNoArrastraALaOtra()
+    public async Task Racha_LaDegradacionParcialNoAbreElCircuito()
     {
         var log = new CapturingLogger();
-        var breaker = new CircuitBreakerOptions
-        {
-            FailuresBeforeBreaking = 3,
-            FailureRatio = 0.5,
-            MinimumThroughput = 10,
-            SamplingDuration = TimeSpan.FromMinutes(5),
-            BreakDuration = LongBreak
-        };
-        var policy = SelectorFor(NoRetry, breaker, log)(Request(HttpMethod.Get));
+        var policy = SelectorFor(NoRetry, Breaker(failures: 3), log)(Request(HttpMethod.Get));
         var call = new FailingCall();
 
-        await AlternateUntilBroken(policy, call);
+        var opened = await AlternateUntilBroken(policy, call, maxIterations: 40);
 
-        for (var i = 0; i < 10; i++)
-            await Assert.ThrowsAnyAsync<BrokenCircuitException>(
-                () => policy.ExecuteAsync(call.Invoke, CancellationToken.None));
-
-        Assert.Equal(1, log.CountContaining("de las peticiones falló"));
+        Assert.False(opened);
         Assert.Equal(0, log.CountContaining("fallos consecutivos"));
     }
 
@@ -316,66 +164,114 @@ public sealed class CircuitBreakerPolicyTests
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// El breaker está dentro del retry, así que cada reintento incrementa su contador.
-    /// Con 3 intentos por operación y umbral 4, la primera operación deja el contador en 3
-    /// y la segunda abre el circuito en su primer intento.
+    /// El breaker envuelve al retry, así que una operación que agota sus intentos registra
+    /// <b>un solo</b> fallo. Con umbral 2 hacen falta dos operaciones completas para abrir,
+    /// aunque entre ambas hayan pasado 6 intentos por la red.
     /// </summary>
     [Fact]
-    public async Task CadaReintento_CuentaComoUnFalloDelBreaker()
+    public async Task UnaOperacionCompleta_CuentaComoUnSoloFalloDelBreaker()
     {
         var retry = new RetryOptions { MaxRetries = 2, BaseDelay = Instant };
-        var policy = PolicyFor(retry, ConsecutiveOnly(failures: 4));
+        var policy = PolicyFor(retry, Breaker(failures: 2));
         var call = new FailingCall();
 
         await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
 
         Assert.Equal(3, call.Calls);
 
+        await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+
+        Assert.Equal(6, call.Calls);
+
         await Assert.ThrowsAnyAsync<BrokenCircuitException>(
             () => policy.ExecuteAsync(call.Invoke, CancellationToken.None));
 
-        Assert.Equal(4, call.Calls);
+        Assert.Equal(6, call.Calls);
     }
 
     /// <summary>
-    /// Regresión: con el umbral igual a los intentos de una operación, una única petición
-    /// fallida agota el contador y deja el circuito abierto. La operación en curso devuelve
-    /// su 500 con normalidad, pero la <b>siguiente</b> — aunque sea a otro endpoint — falla
-    /// sin tocar la red. <c>FacturamaOptions.Validate</c> ahora rechaza esta combinación.
+    /// Regresión: cuando el breaker estaba dentro del retry, un umbral igual o menor a los
+    /// intentos de una operación dejaba el circuito abierto con una sola petición fallida, y
+    /// hacía falta una validación cruzada con <c>RetryOptions</c> para impedirlo. Con el
+    /// breaker por fuera la combinación es inofensiva: sigue contando operaciones.
     /// </summary>
     [Fact]
-    public async Task ConUmbralIgualALosIntentos_UnaSolaOperacionDejaElCircuitoAbierto()
+    public async Task ConUmbralMenorALosIntentos_UnaSolaOperacionNoAbreElCircuito()
     {
-        var retry = new RetryOptions { MaxRetries = 2, BaseDelay = Instant };
-        var policy = PolicyFor(retry, ConsecutiveOnly(failures: 3));
+        var retry = new RetryOptions { MaxRetries = 5, BaseDelay = Instant };
+        var policy = PolicyFor(retry, Breaker(failures: 2));
         var call = new FailingCall();
 
         var response = await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
 
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Equal(3, call.Calls);
+        Assert.Equal(6, call.Calls);
+
+        var second = await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.InternalServerError, second.StatusCode);
+    }
+
+    /// <summary>
+    /// Con el circuito abierto la petición falla antes de entrar al retry: no consume intentos
+    /// ni esperas de backoff.
+    /// </summary>
+    [Fact]
+    public async Task ConElCircuitoAbierto_NoSeConsumenReintentos()
+    {
+        var retry = new RetryOptions { MaxRetries = 3, BaseDelay = Instant };
+        var policy = PolicyFor(retry, Breaker(failures: 2));
+        var call = new FailingCall();
+
+        await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+        await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+
+        var callsBeforeOpen = call.Calls;
 
         await Assert.ThrowsAnyAsync<BrokenCircuitException>(
             () => policy.ExecuteAsync(call.Invoke, CancellationToken.None));
 
-        Assert.Equal(3, call.Calls);
+        Assert.Equal(callsBeforeOpen, call.Calls);
     }
 
     /// <summary>
-    /// Los defaults de fábrica (3 reintentos, racha 10, throughput 20) toleran una operación
-    /// completa fallida sin abrir el circuito por ninguna de las dos capas.
+    /// Los defaults de fábrica (3 reintentos, racha 5) toleran cuatro operaciones completas
+    /// fallidas antes de abrir el circuito.
     /// </summary>
     [Fact]
-    public async Task ConLosDefaults_UnaOperacionFallidaNoAbreElCircuito()
+    public async Task ConLosDefaults_CuatroOperacionesFallidasNoAbrenElCircuito()
     {
         var retry = new RetryOptions { BaseDelay = Instant };
-        var policy = PolicyFor(retry, new CircuitBreakerOptions());
+        var policy = PolicyFor(retry, new CircuitBreakerOptions { BreakDuration = LongBreak });
         var call = new FailingCall();
 
-        var response = await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+        for (var i = 0; i < 4; i++)
+        {
+            var response = await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+            Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        }
 
-        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
-        Assert.Equal(4, call.Calls);
+        Assert.Equal(16, call.Calls);
+    }
+
+    /// <summary>
+    /// La quinta operación fallida alcanza el default de <c>FailuresBeforeBreaking</c> y abre
+    /// el circuito para toda la cuenta.
+    /// </summary>
+    [Fact]
+    public async Task ConLosDefaults_LaQuintaOperacionFallidaAbreElCircuito()
+    {
+        var retry = new RetryOptions { BaseDelay = Instant };
+        var policy = PolicyFor(retry, new CircuitBreakerOptions { BreakDuration = LongBreak });
+        var call = new FailingCall();
+
+        for (var i = 0; i < 5; i++)
+            await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+
+        await Assert.ThrowsAnyAsync<BrokenCircuitException>(
+            () => policy.ExecuteAsync(call.Invoke, CancellationToken.None));
+
+        Assert.Equal(20, call.Calls);
     }
 
     // -------------------------------------------------------------------------
@@ -391,7 +287,7 @@ public sealed class CircuitBreakerPolicyTests
     {
         var selector = SelectorFor(
             new RetryOptions { BaseDelay = Instant },
-            ConsecutiveOnly(failures: 2));
+            Breaker(failures: 2));
         var postPolicy = selector(Request(HttpMethod.Post));
         var getPolicy = selector(Request(HttpMethod.Get));
         var call = new FailingCall();
@@ -408,7 +304,7 @@ public sealed class CircuitBreakerPolicyTests
     [Fact]
     public async Task TrasBreakDuration_PasaAHalfOpenYSeCierraConUnExito()
     {
-        var breaker = ConsecutiveOnly(failures: 2) with
+        var breaker = Breaker(failures: 2) with
         {
             BreakDuration = TimeSpan.FromMilliseconds(150)
         };
@@ -428,6 +324,88 @@ public sealed class CircuitBreakerPolicyTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    // -------------------------------------------------------------------------
+    // Rate limit (429): se reintenta, pero no es síntoma de un servicio enfermo
+    // -------------------------------------------------------------------------
+
+    private sealed class RateLimitedCall
+    {
+        internal int Calls { get; private set; }
+
+        internal Task<HttpResponseMessage> Invoke(CancellationToken _)
+        {
+            Calls++;
+            return Task.FromResult(new HttpResponseMessage((HttpStatusCode)429));
+        }
+    }
+
+    /// <summary>
+    /// Regresión: <c>HandleTransientHttpError()</c> de Polly cubre 5xx y 408, pero <b>no</b> 429.
+    /// Sin añadirlo explícitamente, el error más común de una API de facturación bajo carga
+    /// era el único que la política de reintentos ignoraba.
+    /// </summary>
+    [Fact]
+    public async Task RateLimit_SeReintenta()
+    {
+        var retry = new RetryOptions { MaxRetries = 2, BaseDelay = Instant, MaxDelay = Instant };
+        var policy = PolicyFor(retry, Breaker(failures: 100));
+        var call = new RateLimitedCall();
+
+        await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+
+        Assert.Equal(3, call.Calls);
+    }
+
+    /// <summary>
+    /// Un 429 significa que la API está sana y respondiendo bien, solo que vamos rápido.
+    /// Abrir el circuito bloquearía 30s toda la cuenta por una política de cuotas que el
+    /// servidor ya comunica con precisión vía Retry-After.
+    /// </summary>
+    [Fact]
+    public async Task RateLimit_NoAbreElCircuito()
+    {
+        var policy = PolicyFor(NoRetry, Breaker(failures: 2));
+        var call = new RateLimitedCall();
+
+        for (var i = 0; i < 10; i++)
+        {
+            var response = await policy.ExecuteAsync(call.Invoke, CancellationToken.None);
+            Assert.Equal(429, (int)response.StatusCode);
+        }
+
+        Assert.Equal(10, call.Calls);
+    }
+
+    /// <summary>
+    /// Consecuencia de dejar 429 fuera de los fallos del breaker: Polly trata todo resultado no
+    /// manejado como un <b>éxito</b>, así que un 429 intercalado <b>reinicia</b> la racha de 5xx.
+    /// <para>
+    /// Es coherente con la semántica elegida —el servidor respondió, está sano—, pero implica
+    /// que una API que alterna 5xx y 429 no abre el circuito por racha. De ese patrón se
+    /// encarga la capa de ratio, y solo si el consumidor la habilitó.
+    /// </para>
+    /// </summary>
+    [Fact]
+    public async Task RateLimit_ReiniciaLaRachaDeFallos()
+    {
+        var policy = PolicyFor(NoRetry, Breaker(failures: 2));
+        var rateLimited = new RateLimitedCall();
+        var failing = new FailingCall();
+
+        await policy.ExecuteAsync(failing.Invoke, CancellationToken.None);      // racha = 1
+        await policy.ExecuteAsync(rateLimited.Invoke, CancellationToken.None);  // 429 → racha = 0
+
+        // Sin el 429 en medio, esta operación habría sido la segunda seguida y habría abierto.
+        var stillClosed = await policy.ExecuteAsync(failing.Invoke, CancellationToken.None);
+
+        Assert.Equal(HttpStatusCode.InternalServerError, stillClosed.StatusCode);
+
+        await policy.ExecuteAsync(failing.Invoke, CancellationToken.None);      // racha = 2 → abre
+
+        await Assert.ThrowsAnyAsync<BrokenCircuitException>(
+            () => policy.ExecuteAsync(failing.Invoke, CancellationToken.None));
+    }
+
     [Fact]
     public async Task Deshabilitado_NingunaCapaAbreElCircuito()
     {
@@ -440,3 +418,4 @@ public sealed class CircuitBreakerPolicyTests
         Assert.Equal(40, call.Calls);
     }
 }
+

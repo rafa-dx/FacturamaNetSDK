@@ -1,6 +1,6 @@
 # FacturamaNetSDK
 
-SDK **no oficial** en .NET para consumir la API de facturación electrónica de [Facturama](https://facturama.mx) (CFDI 4.0, México).
+SDK en .NET para consumir la API de facturación electrónica de [Facturama](https://facturama.mx) (CFDI 4.0, México).
 
 Cubre CFDI (API Web y API Lite multiemisor), clientes, catálogos del SAT y retenciones, con resiliencia (reintentos + circuit breaker vía Polly), logging opcional y una jerarquía de excepciones tipadas.
 
@@ -15,7 +15,7 @@ El paquete multiplataforma dos targets:
 | Target | Cubre |
 |--------|-------|
 | `net8.0` | .NET 8 y superior |
-| `netstandard2.0` | .NET Framework 4.6.1+, .NET Core 2.0+, .NET 5/6/7, Mono, Xamarin |
+| `netstandard2.0` | .NET Framework 4.6.1+, .NET Core 2.0+, .NET 5/6/7 |
 
 También necesitas credenciales de Facturama (usuario y contraseña). Regístrate para el entorno sandbox en [Facturama](https://facturama.mx).
 
@@ -178,21 +178,36 @@ catch (FacturamaException ex)                // base (servidor, timeout, conexi�
 
 El pipeline HTTP incluye por defecto (vía Polly), sin que tengas que configurar nada:
 
-- **Reintentos:** 3 intentos con backoff exponencial, solo en errores transitorios y solo en
-  verbos idempotentes (GET, PUT, DELETE). POST no se reintenta por defecto.
-- **Circuit breaker en dos capas**, ambas compartidas por todos los endpoints del cliente y
-  con 30 s de recuperación:
-  - **Racha:** abre tras 10 fallos *consecutivos*. Protege al consumidor de bajo volumen y
-    detecta una caída total de la API.
-  - **Ratio:** abre cuando más del 50 % de las peticiones falla en una ventana de 60 s, siempre
-    que haya al menos 20 peticiones en ella. Detecta degradación parcial bajo carga.
+- **Reintentos:** 3 reintentos (4 intentos) con backoff exponencial **con jitter**, solo en
+  errores transitorios —5xx, 408 y **429**— y solo en verbos idempotentes (GET, PUT, DELETE).
+  POST no se reintenta por defecto.
+- **`Retry-After`:** si la API envía la cabecera, el SDK la respeta en lugar del backoff
+  calculado, acotada por `RetryOptions.MaxDelay` (10 s).
+- **Circuit breaker:** abre tras **5 operaciones fallidas consecutivas** y se recupera a los 30 s.
+  Es único por cliente, así que la protección aplica a la cuenta completa y no a cada ruta.
 
 Con el circuito abierto, las peticiones fallan de inmediato con `FacturamaServerException` (503)
-sin llegar a la red.
+sin llegar a la red y sin consumir reintentos.
 
-> Ambas capas cuentan **intentos**, no operaciones: cada reintento pasa por ellas. Si ajustas los
-> umbrales, `FailuresBeforeBreaking` y `MinimumThroughput` deben superar `MaxRetries + 1`, o una
-> sola petición fallida dejará el circuito abierto. El SDK lo valida al construir el cliente.
+> Los umbrales cuentan **operaciones**, no intentos: una llamada que agota sus 4 intentos suma
+> un solo fallo. Puedes ajustar el breaker y los reintentos por separado, sin relación entre ellos.
+
+> Un **429 se reintenta pero no abre el circuito**: la API está sana, solo pide que bajes el
+> ritmo. Como efecto colateral, un 429 reinicia la racha de fallos consecutivos del breaker.
+
+### Presupuesto de la operación
+
+`FacturamaOptions.Timeout` (10 s por defecto) es el techo de **un intento**, no de la llamada
+completa. El SDK calcula el techo total y lo aplica a `HttpClient.Timeout`:
+
+```
+Total = Timeout × (MaxRetries + 1) + MaxDelay × MaxRetries + 5 s de margen
+      = 10 × 4 + 10 × 3 + 5 = 75 s
+```
+
+Ese es el peor caso, no la latencia habitual: una API que responde 5xx al instante agota los
+reintentos en ~14 s. Si tu aplicación es interactiva y 75 s es demasiado, baja `Timeout` y
+`MaxRetries` — son las dos palancas que más pesan.
 
 ```csharp
 var client = new FacturamaClient(options =>
@@ -201,14 +216,22 @@ var client = new FacturamaClient(options =>
     options.Password = "contraseña";
     options.CircuitBreaker = new CircuitBreakerOptions
     {
-        FailuresBeforeBreaking = 10,
-        FailureRatio = 0.5,
-        SamplingDuration = TimeSpan.FromSeconds(60),
-        MinimumThroughput = 20,
+        FailuresBeforeBreaking = 5,
         BreakDuration = TimeSpan.FromSeconds(30)
     };
 });
 ```
+
+### Limitación conocida: degradación parcial
+
+El breaker cuenta fallos **consecutivos**, así que un solo éxito intercalado reinicia el
+contador. Si la API alterna éxitos y fallos —degradación parcial en vez de caída total— el
+circuito no abre.
+
+Cubrir ese caso requiere abrir por *proporción* de fallos sobre una ventana deslizante, lo que
+exige un volumen sostenido (del orden de una operación cada 3 segundos) que un consumidor de
+facturación típico no alcanza. Se dejó fuera de 1.0.0 y se evaluará para una versión posterior
+si aparece el caso de uso de timbrado masivo concurrente.
 
 ---
 

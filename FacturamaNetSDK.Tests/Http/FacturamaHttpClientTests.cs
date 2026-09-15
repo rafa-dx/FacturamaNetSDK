@@ -11,7 +11,6 @@ namespace FacturamaNetSDK.Tests.Http;
 
 public sealed class FacturamaHttpClientTests
 {
-    private static readonly Guid FixedGuid = new("11111111-2222-3333-4444-555555555555");
     private static readonly DateTimeOffset FixedNow = new(2026, 8, 13, 12, 0, 0, TimeSpan.Zero);
 
     private sealed record Payload(string Name, int Total);
@@ -19,7 +18,6 @@ public sealed class FacturamaHttpClientTests
     private static FacturamaHttpClient CreateSut(StubHttpMessageHandler handler) =>
         new(
             new HttpClient(handler) { BaseAddress = new Uri("https://apisandbox.facturama.mx/") },
-            newGuid: () => FixedGuid,
             utcNow: () => FixedNow);
 
     // -------------------------------------------------------------------------
@@ -291,26 +289,19 @@ public sealed class FacturamaHttpClientTests
     // Idempotencia
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// La idempotencia está deshabilitada por decisión del equipo. Esta prueba fija la
+    /// ausencia de la cabecera: si alguien la reactiva sin decidirlo, falla aquí.
+    /// </summary>
     [Fact]
-    public async Task PostAsync_SinClave_UsaElGeneradorInyectado()
+    public async Task PostAsync_NoEnviaCabeceraDeIdempotencia()
     {
         var handler = StubHttpMessageHandler.Returns(HttpStatusCode.OK, """{"Name":"x","Total":1}""");
         using var sut = CreateSut(handler);
 
         await sut.PostAsync<Payload>("product", new { Name = "x" });
 
-        Assert.Equal(FixedGuid.ToString(), handler.LastRequest.Header("Idempotency-Key"));
-    }
-
-    [Fact]
-    public async Task PostAsync_ConClaveExplicita_LaRespeta()
-    {
-        var handler = StubHttpMessageHandler.Returns(HttpStatusCode.OK, """{"Name":"x","Total":1}""");
-        using var sut = CreateSut(handler);
-
-        await sut.PostAsync<Payload>("product", new { Name = "x" }, idempotencyKey: "clave-del-consumidor");
-
-        Assert.Equal("clave-del-consumidor", handler.LastRequest.Header("Idempotency-Key"));
+        Assert.Null(handler.LastRequest.Header("Idempotency-Key"));
     }
 
     [Fact]

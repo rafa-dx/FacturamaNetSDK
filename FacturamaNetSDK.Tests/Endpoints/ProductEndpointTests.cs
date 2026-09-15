@@ -101,21 +101,12 @@ public sealed class ProductEndpointTests
     // Idempotencia en la escritura
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// La idempotencia está deshabilitada por decisión del equipo. Esta prueba fija la
+    /// ausencia de la cabecera: si alguien la reactiva sin decidirlo, falla aquí.
+    /// </summary>
     [Fact]
-    public async Task CreateAsync_PropagaLaClaveDeIdempotencia()
-    {
-        var handler = StubHttpMessageHandler.Returns(HttpStatusCode.OK, """{"Id":"abc","Name":"Silla"}""");
-        var (endpoint, client) = CreateSut(handler);
-        using (client)
-        {
-            await endpoint.CreateAsync(new ProductRequest { Name = "Silla" }, idempotencyKey: "clave-1");
-
-            Assert.Equal("clave-1", handler.LastRequest.Header("Idempotency-Key"));
-        }
-    }
-
-    [Fact]
-    public async Task CreateAsync_SinClave_GeneraUna()
+    public async Task CreateAsync_NoEnviaCabeceraDeIdempotencia()
     {
         var handler = StubHttpMessageHandler.Returns(HttpStatusCode.OK, """{"Id":"abc","Name":"Silla"}""");
         var (endpoint, client) = CreateSut(handler);
@@ -123,7 +114,7 @@ public sealed class ProductEndpointTests
         {
             await endpoint.CreateAsync(new ProductRequest { Name = "Silla" });
 
-            Assert.True(Guid.TryParse(handler.LastRequest.Header("Idempotency-Key"), out _));
+            Assert.Null(handler.LastRequest.Header("Idempotency-Key"));
         }
     }
 

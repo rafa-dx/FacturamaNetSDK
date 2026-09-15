@@ -11,10 +11,7 @@ public sealed class CircuitBreakerOptionsTests
 
         Assert.True(breaker.Enabled);
         Assert.Equal(TimeSpan.FromSeconds(30), breaker.BreakDuration);
-        Assert.Equal(10, breaker.FailuresBeforeBreaking);
-        Assert.Equal(0.5, breaker.FailureRatio);
-        Assert.Equal(TimeSpan.FromSeconds(60), breaker.SamplingDuration);
-        Assert.Equal(20, breaker.MinimumThroughput);
+        Assert.Equal(5, breaker.FailuresBeforeBreaking);
     }
 
     [Fact]
@@ -65,73 +62,6 @@ public sealed class CircuitBreakerOptionsTests
         new CircuitBreakerOptions { BreakDuration = TimeSpan.FromTicks(1) }.Validate();
     }
 
-    // --- Capa de ratio ---
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-0.1)]
-    [InlineData(1.01)]
-    [InlineData(double.NaN)]
-    public void FailureRatio_FueraDeRango_Lanza(double ratio)
-    {
-        var breaker = new CircuitBreakerOptions { FailureRatio = ratio };
-
-        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => breaker.Validate());
-        Assert.Equal(nameof(CircuitBreakerOptions.FailureRatio), ex.ParamName);
-    }
-
-    [Theory]
-    [InlineData(0.01)]
-    [InlineData(0.5)]
-    [InlineData(1)]
-    public void FailureRatio_EnRango_EsValido(double ratio)
-    {
-        new CircuitBreakerOptions { FailureRatio = ratio }.Validate();
-    }
-
-    /// <summary>
-    /// Polly rechaza ventanas por debajo de la resolución de su temporizador; validarlo aquí
-    /// convierte el fallo en un error de configuración claro en vez de una excepción de Polly.
-    /// </summary>
-    [Fact]
-    public void SamplingDuration_BajoLaResolucionDelTemporizador_Lanza()
-    {
-        var breaker = new CircuitBreakerOptions
-        {
-            SamplingDuration = CircuitBreakerOptions.MinimumSamplingDuration - TimeSpan.FromTicks(1)
-        };
-
-        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => breaker.Validate());
-        Assert.Equal(nameof(CircuitBreakerOptions.SamplingDuration), ex.ParamName);
-    }
-
-    [Fact]
-    public void SamplingDuration_EnLaResolucionExacta_EsValida()
-    {
-        new CircuitBreakerOptions
-        {
-            SamplingDuration = CircuitBreakerOptions.MinimumSamplingDuration
-        }.Validate();
-    }
-
-    [Theory]
-    [InlineData(int.MinValue)]
-    [InlineData(0)]
-    [InlineData(1)]
-    public void MinimumThroughput_MenorA2_Lanza(int throughput)
-    {
-        var breaker = new CircuitBreakerOptions { MinimumThroughput = throughput };
-
-        var ex = Assert.Throws<ArgumentOutOfRangeException>(() => breaker.Validate());
-        Assert.Equal(nameof(CircuitBreakerOptions.MinimumThroughput), ex.ParamName);
-    }
-
-    [Fact]
-    public void MinimumThroughput_Igual2_EsElMinimoAceptado()
-    {
-        new CircuitBreakerOptions { MinimumThroughput = 2 }.Validate();
-    }
-
     /// <summary>
     /// Apagado el breaker, sus umbrales son irrelevantes: validarlos obligaría a rellenar
     /// valores coherentes para una política que no se construye.
@@ -143,10 +73,7 @@ public sealed class CircuitBreakerOptionsTests
         {
             Enabled = false,
             FailuresBeforeBreaking = 0,
-            BreakDuration = TimeSpan.Zero,
-            FailureRatio = 0,
-            SamplingDuration = TimeSpan.Zero,
-            MinimumThroughput = 0
+            BreakDuration = TimeSpan.Zero
         }.Validate();
     }
 }
@@ -221,36 +148,6 @@ public sealed class RetryOptionsValidationTests
         }.Validate();
     }
 
-    [Fact]
-    public void MaxAttemptsPerOperation_PorDefecto_EsElInicialMasLosReintentos()
-    {
-        Assert.Equal(4, new RetryOptions { MaxRetries = 3 }.MaxAttemptsPerOperation);
-    }
-
-    [Fact]
-    public void MaxAttemptsPerOperation_ConReintentosApagados_EsUno()
-    {
-        Assert.Equal(1, new RetryOptions { Enabled = false, MaxRetries = 3 }.MaxAttemptsPerOperation);
-    }
-
-    /// <summary>
-    /// Con todos los verbos apagados no hay reintento posible, aunque
-    /// <see cref="RetryOptions.Enabled"/> siga en true.
-    /// </summary>
-    [Fact]
-    public void MaxAttemptsPerOperation_SinNingunVerboHabilitado_EsUno()
-    {
-        var retry = new RetryOptions
-        {
-            MaxRetries = 3,
-            RetryGet = false,
-            RetryPost = false,
-            RetryPut = false,
-            RetryDelete = false
-        };
-
-        Assert.Equal(1, retry.MaxAttemptsPerOperation);
-    }
 }
 
 public sealed class FacturamaOptionsValidationTests
@@ -301,104 +198,20 @@ public sealed class FacturamaOptionsValidationTests
     }
 
     /// <summary>
-    /// Regresión: esta era la configuración del proyecto Sandbox. El breaker cuenta intentos,
-    /// así que con 3 intentos por operación y umbral 3 una única petición fallida abría el
-    /// circuito para toda la cuenta y devolvía 503 en lugar del error real.
+    /// Regresión: cuando el breaker contaba intentos, un umbral por debajo de
+    /// <c>MaxRetries + 1</c> abría el circuito con una sola operación fallida y
+    /// <c>Validate</c> tenía que rechazar la combinación. Ahora cuenta operaciones, así que
+    /// los umbrales del breaker y los reintentos son independientes.
     /// </summary>
-    [Fact]
-    public void UmbralIgualALosIntentosDeUnaOperacion_Lanza()
+    [Theory]
+    [InlineData(2, 2)]
+    [InlineData(5, 3)]
+    [InlineData(10, 2)]
+    public void UmbralDelBreakerPorDebajoDeLosReintentos_YaNoLanza(int maxRetries, int failures)
     {
         var options = Valid();
-        options.Retry = new RetryOptions { MaxRetries = 2 };
-        options.CircuitBreaker = new CircuitBreakerOptions { FailuresBeforeBreaking = 3 };
-
-        var ex = Assert.Throws<ArgumentException>(() => options.Validate());
-        Assert.Equal(nameof(FacturamaOptions.CircuitBreaker), ex.ParamName);
-    }
-
-    [Fact]
-    public void UmbralMenorALosIntentosDeUnaOperacion_Lanza()
-    {
-        var options = Valid();
-        options.Retry = new RetryOptions { MaxRetries = 5 };
-        options.CircuitBreaker = new CircuitBreakerOptions { FailuresBeforeBreaking = 3 };
-
-        Assert.Throws<ArgumentException>(() => options.Validate());
-    }
-
-    /// <summary>
-    /// La capa de ratio también cuenta intentos: con <c>MinimumThroughput</c> por debajo de los
-    /// intentos de una operación, sus 4 fallos dan un ratio del 100% y abren el circuito solos.
-    /// </summary>
-    [Fact]
-    public void MinimumThroughputIgualALosIntentosDeUnaOperacion_Lanza()
-    {
-        var options = Valid();
-        options.Retry = new RetryOptions { MaxRetries = 3 };
-        options.CircuitBreaker = new CircuitBreakerOptions { MinimumThroughput = 4 };
-
-        var ex = Assert.Throws<ArgumentException>(() => options.Validate());
-        Assert.Equal(nameof(FacturamaOptions.CircuitBreaker), ex.ParamName);
-        Assert.Contains(nameof(CircuitBreakerOptions.MinimumThroughput), ex.Message);
-    }
-
-    [Fact]
-    public void MinimumThroughputUnoPorEncimaDeLosIntentos_EsElMinimoAceptado()
-    {
-        var options = Valid();
-        options.Retry = new RetryOptions { MaxRetries = 3 };
-        options.CircuitBreaker = new CircuitBreakerOptions { MinimumThroughput = 5 };
-
-        options.Validate();
-    }
-
-    [Fact]
-    public void UmbralUnoPorEncimaDeLosIntentos_EsElMinimoAceptado()
-    {
-        var options = Valid();
-        options.Retry = new RetryOptions { MaxRetries = 2 };
-        options.CircuitBreaker = new CircuitBreakerOptions { FailuresBeforeBreaking = 4 };
-
-        options.Validate();
-    }
-
-    [Fact]
-    public void SinReintentos_ElUmbralMinimoSigueSiendoDos()
-    {
-        var options = Valid();
-        options.Retry = new RetryOptions { Enabled = false };
-        options.CircuitBreaker = new CircuitBreakerOptions { FailuresBeforeBreaking = 2 };
-
-        options.Validate();
-    }
-
-    [Fact]
-    public void BreakerDeshabilitado_NoExigeRelacionConLosReintentos()
-    {
-        var options = Valid();
-        options.Retry = new RetryOptions { MaxRetries = 10 };
-        options.CircuitBreaker = new CircuitBreakerOptions { Enabled = false, FailuresBeforeBreaking = 2 };
-
-        options.Validate();
-    }
-
-    /// <summary>
-    /// Con todos los verbos apagados una operación gasta un solo intento, así que
-    /// la validación cruzada no debe exigir un umbral alto.
-    /// </summary>
-    [Fact]
-    public void ReintentosSinVerbosHabilitados_NoExigeUmbralAlto()
-    {
-        var options = Valid();
-        options.Retry = new RetryOptions
-        {
-            MaxRetries = 8,
-            RetryGet = false,
-            RetryPost = false,
-            RetryPut = false,
-            RetryDelete = false
-        };
-        options.CircuitBreaker = new CircuitBreakerOptions { FailuresBeforeBreaking = 2 };
+        options.Retry = new RetryOptions { MaxRetries = maxRetries };
+        options.CircuitBreaker = new CircuitBreakerOptions { FailuresBeforeBreaking = failures };
 
         options.Validate();
     }
