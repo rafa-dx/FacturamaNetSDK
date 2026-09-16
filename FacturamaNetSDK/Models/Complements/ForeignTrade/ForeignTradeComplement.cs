@@ -53,6 +53,7 @@ namespace FacturamaNetSDK.Models.Complements.ForeignTrade
 
         /// <summary>
         /// Excepción de certificados de Origen de los Tratados de Libre Comercio.
+        /// </summary>
         [JsonPropertyName("OriginCertificate")]
         public bool? OriginCertificate { get; set; }
 

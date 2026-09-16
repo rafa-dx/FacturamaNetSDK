@@ -1,3 +1,4 @@
+using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Models.Cfdi.Responses;
 using FacturamaNetSDK.Models.Filters;
 using FacturamaNetSDK.Models.Retentions.Request;
@@ -26,5 +27,5 @@ public interface IRetentionEndpoint
     Task<CfdiSendResponse> SendByEmailAsync(string id, string email, CancellationToken cancellationToken = default);
 
     /// <summary>Descarga una retención (PDF/XML) por ID.</summary>
-    Task<CfdiDownloadResponse> DownloadAsync(string fileType, string id, CancellationToken cancellationToken = default);
+    Task<CfdiDownloadResponse> DownloadAsync(CfdiFileType fileType, string id, CancellationToken cancellationToken = default);
 }

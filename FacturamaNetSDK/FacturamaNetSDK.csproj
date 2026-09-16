@@ -15,7 +15,6 @@
          se elevan a error en .editorconfig para que no vuelvan a colarse en la librería -->
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
 
-    <!-- Documentación XML: expone los /// al IntelliSense del consumidor y a herramientas/IA -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- Temporal: silencia CS1591 mientras se completa la cobertura de XML docs en modelos (Fase 4) -->
     <NoWarn>$(NoWarn);CS1591</NoWarn>

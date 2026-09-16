@@ -32,14 +32,14 @@ public sealed class CfdiEndpoint : ICfdiEndpoint
     /// </summary>
     public Task<CfdiResponse> CreateAsync(
         CfdiRequest request,
-        string? idempotencyKey = null,
+        //string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         Guard.NotNull(request, nameof(request));
         return _client.PostAsync<CfdiResponse>(
             CfdisResource,
             request,
-            idempotencyKey: idempotencyKey,
+            //idempotencyKey: idempotencyKey,
             cancellationToken: cancellationToken);
     }
 

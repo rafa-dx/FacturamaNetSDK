@@ -20,7 +20,7 @@ public sealed class BranchOfficeEndpoint : IBranchOfficeEndpoint
     }
 
     /// <inheritdoc />
-    public Task<BranchOfficeResponse> AddAsync(
+    public Task<BranchOfficeResponse> CreateAsync(
         BranchOfficeRequest request,
         CancellationToken cancellationToken = default)
     {

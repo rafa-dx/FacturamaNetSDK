@@ -1,4 +1,4 @@
-using FacturamaNetSDK.Exceptions;
+﻿using FacturamaNetSDK.Exceptions;
 using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Serialization;
 using Polly.CircuitBreaker;
@@ -19,16 +19,14 @@ internal sealed class FacturamaHttpClient : IDisposable
 
     private readonly HttpClient _httpClient;
     private readonly JsonSerializerOptions _jsonOptions = JsonSerializerOptionsFactory.Default;
-    private readonly Func<Guid> _newGuid;
     private readonly Func<DateTimeOffset> _utcNow;
+
 
     internal FacturamaHttpClient(
         HttpClient httpClient,
-        Func<Guid>? newGuid = null,
         Func<DateTimeOffset>? utcNow = null)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-        _newGuid = newGuid ?? Guid.NewGuid;
         _utcNow = utcNow ?? (() => DateTimeOffset.UtcNow);
     }
 
@@ -53,7 +51,6 @@ internal sealed class FacturamaHttpClient : IDisposable
         string endpoint,
         object request,
         Dictionary<string, string?>? queryParams = null,
-        string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         var url = BuildUrl(endpoint, queryParams);
@@ -64,10 +61,6 @@ internal sealed class FacturamaHttpClient : IDisposable
             {
                 Content = Serialize(request)
             };
-
-            httpRequest.Headers.TryAddWithoutValidation(
-                "Idempotency-Key",
-                idempotencyKey ?? _newGuid().ToString());
 
             using var response = await _httpClient.SendAsync(httpRequest, cancellationToken)
                 .ConfigureAwait(false);
@@ -336,7 +329,9 @@ internal sealed class FacturamaHttpClient : IDisposable
         if (string.IsNullOrEmpty(qs))
             return endpoint;
 
-        var separator = endpoint.Contains('?') ? '&' : '?';
+        // IndexOf y no Contains(char): esa sobrecarga no existe en netstandard2.0, donde
+        // enlazaría a Enumerable.Contains de LINQ y recorrería la cadena con un enumerador.
+        var separator = endpoint.IndexOf('?') >= 0 ? '&' : '?';
         return $"{endpoint}{separator}{qs}";
     }
 }

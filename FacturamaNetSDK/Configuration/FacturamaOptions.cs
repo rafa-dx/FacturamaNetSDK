@@ -26,9 +26,18 @@ public sealed class FacturamaOptions
     public ApiLiteVersion ApiLiteVersion { get; set; } = ApiLiteVersion.V3;
 
     /// <summary>
-    /// Timeout para las peticiones HTTP. Default: 30 segundos.
+    /// Timeout de <b>un intento</b> individual. Default: 10 segundos.
+    /// <para>
+    /// No es el techo de la operación completa: ese lo calcula el SDK sumando todos los
+    /// intentos más sus esperas, y es el valor que acaba en <c>HttpClient.Timeout</c>. Con
+    /// los defaults, la operación completa se corta a los 75s.
+    /// </para>
+    /// <para>
+    /// ⚠️ <b>A definir con el equipo.</b> 10s asume un consumidor interactivo (API web) donde
+    /// colgarse es peor que fallar. Para procesos por lotes o timbrado masivo conviene subirlo.
+    /// </para>
     /// </summary>
-    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+    public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
     /// URL base explícita para escenarios de prueba local (mock server, WireMock, contenedor).
@@ -66,8 +75,8 @@ public sealed class FacturamaOptions
     /// Valida que la configuración sea correcta.
     /// </summary>
     /// <exception cref="ArgumentException">
-    /// Cuando faltan credenciales, <see cref="BaseUrlOverride"/> no es una URL http/https
-    /// absoluta y segura, o el umbral del breaker no tolera una operación completa.
+    /// Cuando faltan credenciales o <see cref="BaseUrlOverride"/> no es una URL http/https
+    /// absoluta y segura.
     /// </exception>
     /// <exception cref="ArgumentOutOfRangeException">
     /// Cuando el timeout, los reintentos o los umbrales del breaker están fuera de rango.
@@ -87,7 +96,6 @@ public sealed class FacturamaOptions
 
         Retry.Validate();
         CircuitBreaker.Validate();
-        ValidateBreakerToleratesOneOperation();
     }
 
     /// <summary>
@@ -142,40 +150,4 @@ public sealed class FacturamaOptions
             nameof(BaseUrlOverride));
     }
 
-    /// <summary>
-    /// Ambas capas del circuit breaker cuentan intentos, no operaciones: cada reintento pasa
-    /// por ellas. Si un umbral no supera los intentos de una sola operación, una petición
-    /// aislada deja el circuito abierto y la siguiente llamada —aunque sea a otro endpoint—
-    /// falla con un 503 sin llegar a la red.
-    /// </summary>
-    private void ValidateBreakerToleratesOneOperation()
-    {
-        if (!CircuitBreaker.Enabled)
-            return;
-
-        var attempts = Retry.MaxAttemptsPerOperation;
-
-        RequireAboveAttempts(
-            CircuitBreaker.FailuresBeforeBreaking,
-            attempts,
-            nameof(CircuitBreakerOptions.FailuresBeforeBreaking));
-
-        RequireAboveAttempts(
-            CircuitBreaker.MinimumThroughput,
-            attempts,
-            nameof(CircuitBreakerOptions.MinimumThroughput));
-    }
-
-    private static void RequireAboveAttempts(int value, int attempts, string setting)
-    {
-        if (value > attempts)
-            return;
-
-        throw new ArgumentException(
-            $"CircuitBreaker.{setting} ({value}) debe ser mayor que los intentos de una sola operación " +
-            $"({attempts} = Retry.MaxRetries + 1). El breaker cuenta intentos, no operaciones: con este " +
-            $"valor una única petición fallida deja el circuito abierto para toda la cuenta. " +
-            $"Sugerencia: usa al menos {attempts + 1}.",
-            nameof(CircuitBreaker));
-    }
 }

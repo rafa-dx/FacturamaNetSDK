@@ -19,7 +19,7 @@ public interface ISeriesEndpoint
     /// <param name="branchOfficeId">Identificador de la sucursal.</param>
     /// <param name="request">Los datos de la serie a crear.</param>
     /// <param name="cancellationToken">Token de cancelación.</param>
-    Task<SerieResponse> AddAsync(
+    Task<SerieResponse> CreateAsync(
         string branchOfficeId,
         SerieRequest request,
         CancellationToken cancellationToken = default);

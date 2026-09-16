@@ -39,14 +39,14 @@ public sealed class CfdiLiteEndpoint : ICfdiLiteEndpoint
     /// </summary>
     public Task<CfdiLiteResponse> CreateAsync(
         CfdiRequest request,
-        string? idempotencyKey = null,
+        //string? idempotencyKey = null,
         CancellationToken cancellationToken = default)
     {
         Guard.NotNull(request, nameof(request));
         return _liteVersionedClient.PostAsync<CfdiLiteResponse>(
             Resource,
             request,
-            idempotencyKey: idempotencyKey,
+            //idempotencyKey: idempotencyKey,
             cancellationToken: cancellationToken);
     }
 

@@ -9,18 +9,17 @@ namespace FacturamaNetSDK.Endpoints.Abstractions
     /// </summary>
     public interface IProductEndpoint
     {
+        // Idempotencia deshabilitada por decisión del equipo. Para reactivarla: descomenta el
+        // parámetro de la firma, documéntalo con su <param> y descomenta la cabecera en
+        // FacturamaHttpClient.PostAsync.
         /// <summary>
         /// Crea un nuevo producto.
         /// </summary>
         /// <param name="request">Datos del producto a crear.</param>
-        /// <param name="idempotencyKey">
-        /// Clave de idempotencia para evitar duplicados si la petición se reintenta.
-        /// Si se omite, el SDK genera una automáticamente.
-        /// </param>
         /// <param name="cancellationToken">Token de cancelación.</param>
         Task<ProductResponse> CreateAsync(
             ProductRequest request,
-            string? idempotencyKey = null,
+            //string? idempotencyKey = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>

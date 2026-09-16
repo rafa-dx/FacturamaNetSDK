@@ -26,14 +26,14 @@ namespace FacturamaNetSDK.Endpoints
         /// <inheritdoc />
         public Task<ProductResponse> CreateAsync(
             ProductRequest request,
-            string? idempotencyKey = null,
+            //string? idempotencyKey = null,
             CancellationToken cancellationToken = default)
         {
             Guard.NotNull(request, nameof(request));
             return _client.PostAsync<ProductResponse>(
                 Resource,
                 request,
-                idempotencyKey: idempotencyKey,
+                //idempotencyKey: idempotencyKey,
                 cancellationToken: cancellationToken);
         }
 

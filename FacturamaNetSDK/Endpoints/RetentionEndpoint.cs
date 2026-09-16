@@ -1,4 +1,5 @@
 using FacturamaNetSDK.Endpoints.Abstractions;
+using FacturamaNetSDK.Enums;
 using FacturamaNetSDK.Http;
 using FacturamaNetSDK.Internal;
 using FacturamaNetSDK.Models.Cfdi.Responses;
@@ -122,17 +123,15 @@ public sealed class RetentionEndpoint : IRetentionEndpoint
     /// Descarga una retención (PDF/XML) por ID.
     /// </summary>
     public Task<CfdiDownloadResponse> DownloadAsync(
-        string fileType,
+        CfdiFileType fileType,
         string id,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
             throw new ArgumentException("El id es obligatorio.", nameof(id));
-        if (string.IsNullOrWhiteSpace(fileType))
-            throw new ArgumentException("El tipo de archivo es obligatorio.", nameof(fileType));
 
         return _client.GetAsync<CfdiDownloadResponse>(
-            $"{Resource}/{id}/{fileType}",
+            $"{Resource}/{id}/{fileType.ToApiValue()}",
             cancellationToken: cancellationToken);
     }
 }

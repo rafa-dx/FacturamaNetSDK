@@ -11,7 +11,7 @@ public interface IBranchOfficeEndpoint
     /// <summary>Agrega una sucursal.</summary>
     /// <param name="request">Los datos de la sucursal a crear.</param>
     /// <param name="cancellationToken">Token de cancelación.</param>
-    Task<BranchOfficeResponse> AddAsync(
+    Task<BranchOfficeResponse> CreateAsync(
         BranchOfficeRequest request,
         CancellationToken cancellationToken = default);
 

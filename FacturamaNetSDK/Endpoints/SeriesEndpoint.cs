@@ -41,7 +41,7 @@ public sealed class SeriesEndpoint : ISeriesEndpoint
     }
 
     /// <inheritdoc />
-    public Task<SerieResponse> AddAsync(
+    public Task<SerieResponse> CreateAsync(
         string branchOfficeId,
         SerieRequest request,
         CancellationToken cancellationToken = default)

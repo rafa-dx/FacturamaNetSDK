@@ -9,8 +9,6 @@ namespace FacturamaNetSDK.Endpoints;
 /// </summary>
 public sealed class SubscriptionPlanEndpoint : ISubscriptionPlanEndpoint
 {
-    // ⚠️ a verificar con el equipo/API: ruta real del recurso de suscripción
-    // (se conserva el valor original; solo se corrigió la grafía del identificador C#).
     private const string Resource = "suscriptionplan";
     private readonly FacturamaHttpClient _client;
 

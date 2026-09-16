@@ -26,6 +26,21 @@
         /// <summary>Retardo base del backoff exponencial (base^intento). Default: 2s.</summary>
         public TimeSpan BaseDelay { get; init; } = TimeSpan.FromSeconds(2);
 
+        /// <summary>
+        /// Techo de una sola espera entre intentos. Default: 10s.
+        /// <para>
+        /// Acota <b>dos</b> fuentes de espera: el crecimiento del backoff exponencial —que sin
+        /// tope alcanzaría 17 minutos en el décimo reintento— y el <c>Retry-After</c> que envíe
+        /// el servidor. Es lo que mantiene acotado el presupuesto total de la operación.
+        /// </para>
+        /// <para>
+        /// ⚠️ <b>A definir con el equipo.</b> Con los defaults (BaseDelay 2s, 3 reintentos) el
+        /// tope no llega a activarse: las esperas son 2s, 4s y 8s. Solo entra en juego al subir
+        /// <see cref="MaxRetries"/> o cuando la API pide un <c>Retry-After</c> largo.
+        /// </para>
+        /// </summary>
+        public TimeSpan MaxDelay { get; init; } = TimeSpan.FromSeconds(10);
+
         // --- Reintentos por verbo HTTP ---
 
         /// <summary>Reintentar GET (idempotente). Default: true.</summary>
@@ -53,15 +68,6 @@
                 "DELETE" => RetryDelete,
                 _ => false
             };
-        /// <summary>
-        /// Intentos que puede consumir una sola operación (el inicial más los reintentos).
-        /// Vale 1 cuando los reintentos están apagados o ningún verbo los tiene habilitados.
-        /// El circuit breaker usa este valor para dimensionar su umbral.
-        /// </summary>
-        internal int MaxAttemptsPerOperation =>
-            Enabled && (RetryGet || RetryPost || RetryPut || RetryDelete)
-                ? MaxRetries + 1
-                : 1;
 
         internal void Validate()
         {
@@ -79,6 +85,19 @@
                     nameof(BaseDelay),
                     BaseDelay,
                     "Debe ser mayor a cero. Un retardo de cero martillea un servicio caído.");
+
+            if (MaxDelay <= TimeSpan.Zero)
+                throw new ArgumentOutOfRangeException(
+                    nameof(MaxDelay),
+                    MaxDelay,
+                    "Debe ser mayor a cero.");
+
+            if (MaxDelay < BaseDelay)
+                throw new ArgumentOutOfRangeException(
+                    nameof(MaxDelay),
+                    MaxDelay,
+                    $"No puede ser menor que BaseDelay ({BaseDelay}): el tope anularía el backoff " +
+                    "desde el primer reintento.");
         }
     }
 }
