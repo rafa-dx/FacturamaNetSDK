@@ -129,7 +129,7 @@ namespace FacturamaNetSDK.Sandbox.TaxEntity
                 }
             };
 
-            var request = await _client.BranchOffices.AddAsync(branchOfficeRequest);
+            var request = await _client.BranchOffices.CreateAsync(branchOfficeRequest);
             Print("Sucursal agregada", request);
         }
 
@@ -163,7 +163,7 @@ namespace FacturamaNetSDK.Sandbox.TaxEntity
                 Description = "Serie agregada desde SDK net6",
                 Folio = 1
             };
-            var request = await _client.Series.AddAsync("GHtxdqCdMm2qTLXvo8Eqgg2", serieRequest);
+            var request = await _client.Series.CreateAsync("GHtxdqCdMm2qTLXvo8Eqgg2", serieRequest);
             Print("Serie agregada", request);
         }
 

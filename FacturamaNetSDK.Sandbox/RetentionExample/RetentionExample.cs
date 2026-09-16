@@ -179,7 +179,7 @@ namespace FacturamaNetSDK.Sandbox.RetentionExample
                 Console.WriteLine("No se ha creado una retención aún.");
                 return;
             }
-            var pdfBytes = await _client.Retentions.DownloadAsync("pdf", _retentionId);
+            var pdfBytes = await _client.Retentions.DownloadAsync(CfdiFileType.Pdf, _retentionId);
         var filePath = Path.Combine(Directory.GetCurrentDirectory(), $"Retention_{_retentionId}.pdf");
 
             Print("Retención descargada en PDF", pdfBytes);
